@@ -45,15 +45,18 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
     @taskwrapper.task
     async def __archive_task(self, urls, archive_name):
         responses = await self.__get_requests(urls)
-        #await asyncio.gather(responses) # je to takto ok?
         await self.__archive_responses(responses, archive_name)
 
     async def __get_requests(self, urls):
-        responses = list()
+        tasks = list()
+        # task for every url
         for url in urls:
-            response = await self.__client.get_request(url)
-            responses.append(response)
-            print(response.url_and_status)
+            task = self.__client.get_request(url) 
+            tasks.append(task)
+
+        responses = list()
+        responses = await asyncio.gather(*tasks) #
+
         return responses
 
     async def __archive_responses(self, responses, archive_name):
