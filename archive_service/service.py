@@ -1,51 +1,96 @@
+
+import asyncio
+import aiohttp
+from datetime import datetime
+import random
+import string
+from itertools import count
+
+import lemmiwinks
+import lemmiwinks.taskwrapper as taskwrapper
+import lemmiwinks.archive.migration as migration
+import lemmiwinks.httplib as httplib
+import lemmiwinks.pathgen as pathgen
+import lemmiwinks.parslib as parslib
+import lemmiwinks.archive as archive
+
+
+# Sanic imports
 from sanic import Sanic
 from sanic import response
-import asyncio
-
-import aiohttp
-
-from itertools import count
 
 app = Sanic()
 
-async def post(session, downloader, data):
-    
-    try:
-        async with session.post(downloader, json=data) as resp:
-            responseData = await resp.json()
-            return responseData
-    except Exception as e:
-        return {
-            'error' : str(e),
-            'url' : data.get("url"),
-        }
+class ArchiveSettings(migration.MigrationSettings):
+    http_client = httplib.provider.ClientFactoryProvider.aio_factory.singleton_client
+    css_parser = parslib.provider.CSSParserProvider.tinycss_parser
+    html_parser = parslib.provider.HTMLParserProvider.bs_parser
+    resolver = httplib.resolver.URLResolver
+    path_gen = pathgen.FilePathProvider.filepath_generator
+    http_js_pool = httplib.ClientPool
+
+class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
+    def __init__(self, urls, archive_name):
+
+        self.__client = httplib.ClientFactoryProvider.aio_factory.singleton_client(pool_limit=500,timeout=10)
+        self.__settings = ArchiveSettings()
+        self.__envelop = archive.Envelop()
+        self.__archive_name = archive_name
+        self.__urls = urls
+
+    async def task_executor(self):
+        task = self.__archive_task(self.__urls, self.__archive_name)
+        await asyncio.gather(task)
+
+    @taskwrapper.task
+    async def __archive_task(self, urls, archive_name):
+        responses = await self.__get_requests(urls)
+        #await asyncio.gather(responses) # je to takto ok?
+        await self.__archive_responses(responses, archive_name)
+
+    async def __get_requests(self, urls):
+        responses = list()
+        for url in urls:
+            response = await self.__client.get_request(url)
+            responses.append(response)
+            print(response.url_and_status)
+        return responses
+
+    async def __archive_responses(self, responses, archive_name):
+        for response in responses:
+            self.__add_save_response_to_envelop(response)
+        await archive.Archive.archive_as_maff(self.__envelop, archive_name)
+
+    def __add_save_response_to_envelop(self, response):
+        letter = archive.SaveResponseLetter(response, self.__settings, archive.Mode.NO_JS_EXECUTION)
+        self.__envelop.append(letter)
+
 
 async def make_response(request):
-    urls = request.json.get("urls")
+    urls = iter(request.json.get("urls"))
     # TODO: sanitise request
     if not urls:
         return response.json(dict())
-    tasks = list()
-    async with aiohttp.ClientSession() as session:
-        for url in urls:
-            tasks.append(asyncio.ensure_future(post(
-                session, 
-                downloader="http://0.0.0.0:8081", 
-                data=url
-                )))
-        downloader_responses = await asyncio.gather(*tasks) 
 
-        # TODO: process responses
+    #url = next(urls) 
+
+    # random 8 symbol archive id
+    archive_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+    archive_timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+    archive_name =  archive_timestamp + "_" + archive_id
+
+    aio_archive = ArchiveServiceLemmiwinks(urls, archive_name)
+    await aio_archive.task_executor()
 
     resp = {
-        "download_url": "/archive/abcdefgh",
-        "data": downloader_responses
+        "status": "ok",
+        "arhive_path" : archive_name,
     }
-    return response.json(resp)
+    return resp
 
 @app.route('/', methods=['POST'])
 async def post_handler(request):
-    return await make_response(request)
+    return response.json(await make_response(request))
 
 if __name__ == "__main__":
   app.run(host="0.0.0.0", port="8080")
