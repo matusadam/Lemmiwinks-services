@@ -69,9 +69,34 @@ async def make_response(request):
     }
     return resp
 
-@app.route('/', methods=['POST'])
+async def make_info_page(request):
+    info_page = """
+    <html>
+        <head>
+            <title>Download service - Information</title>
+        </head>
+        <body>
+            <p>This is Lemmiwinks download service
+            <p>You are visiting from this IP: %s</p>
+            <p>Usage:</p>
+            <ul>
+                <li>POST request to <b>/download</b></li>
+                <li>In JSON specify 1 requested resource as <b>"mainURL"=string</b></li>
+            </ul>
+        </body>
+    </html>
+    """ % request.ip
+    return info_page
+
+
+@app.route('/download', methods=['POST'])
 async def post_handler(request):
     return response.json(await make_response(request))
+
+@app.route('/', methods=['GET'])
+async def get_handler(request):
+    return response.html(await make_info_page(request))
+
 
 
 if __name__ == "__main__":

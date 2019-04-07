@@ -37,7 +37,7 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
         self.__envelop = archive.Envelop()
         self.__archive_name = archive_name
         self.__urls = urls
-        self.__download_service_url = 'http://0.0.0.0:8081'
+        self.__download_service_url = 'http://0.0.0.0:8081/download'
 
     async def task_executor(self):
         task = self.__archive_task(self.__urls, self.__archive_name)
@@ -100,9 +100,31 @@ async def make_response(request):
     }
     return resp
 
-@app.route('/', methods=['POST'])
+async def make_info_page(request):
+    info_page = """
+    <html>
+        <head>
+            <title>Archive service - Information</title>
+        </head>
+        <body>
+            <p>This is Lemmiwinks archiving service
+            <p>You are visiting from this IP: %s</p>
+            <p>Usage:</p>
+            <ul>
+                <li>POST request to <b>/archive</b></li>
+            </ul>
+        </body>
+    </html>
+    """ % request.ip
+    return info_page
+
+@app.route('/archive', methods=['POST'])
 async def post_handler(request):
     return response.json(await make_response(request))
+
+@app.route('/', methods=['GET'])
+async def get_handler(request):
+    return response.html(await make_info_page(request))
 
 if __name__ == "__main__":
   app.run(host="0.0.0.0", port="8080")
