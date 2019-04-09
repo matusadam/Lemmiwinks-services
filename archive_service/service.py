@@ -5,6 +5,7 @@ from datetime import datetime
 import random
 import string
 from itertools import count
+import os
 
 import lemmiwinks
 import lemmiwinks.taskwrapper as taskwrapper
@@ -78,7 +79,7 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
         self.__envelop.append(letter)
 
 
-async def make_response(request):
+async def archive_post_response(request):
     urls = iter(request.json.get("urls"))
     # TODO: sanitise request
     if not urls:
@@ -100,31 +101,31 @@ async def make_response(request):
     }
     return resp
 
-async def make_info_page(request):
-    info_page = """
-    <html>
-        <head>
-            <title>Archive service - Information</title>
-        </head>
-        <body>
-            <p>This is Lemmiwinks archiving service
-            <p>You are visiting from this IP: %s</p>
-            <p>Usage:</p>
-            <ul>
-                <li>POST request to <b>/archive</b></li>
-            </ul>
-        </body>
-    </html>
-    """ % request.ip
+async def archive_get_response(request):
+    with open("archive.html", "r", encoding='utf-8') as f:
+        archive_page = f.read()
+    maff_files = [file for file in os.listdir() if file.endswith(".maff")]
+    formated = "".join(["<li>%s</li>" % file for file in maff_files])
+    archive_page = archive_page % formated
+    return archive_page
+
+async def info_page_response(request):
+    with open("index.html", "r", encoding='utf-8') as f:
+        info_page = f.read()
+    info_page = info_page % request.ip
     return info_page
 
 @app.route('/archive', methods=['POST'])
 async def post_handler(request):
-    return response.json(await make_response(request))
+    return response.json(await archive_post_response(request))
+
+@app.route('/archive', methods=['GET'])
+async def post_handler(request):
+    return response.html(await archive_get_response(request))
 
 @app.route('/', methods=['GET'])
 async def get_handler(request):
-    return response.html(await make_info_page(request))
+    return response.html(await info_page_response(request))
 
 if __name__ == "__main__":
   app.run(host="0.0.0.0", port="8080")
