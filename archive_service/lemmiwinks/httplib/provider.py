@@ -49,7 +49,7 @@ class HTTPClientDownloader:
     def __init__(self, http_client: object):
         self._logger = logging.getLogger(f"{__name__}{__class__.__name__}")
         self.__http_client = http_client
-        self.__download_service_url = 'http://0.0.0.0:8081'
+        self.__download_service_url = 'http://0.0.0.0:8081/download'
 
     async def download(self, url: str, dst: str) -> None:
         try:

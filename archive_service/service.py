@@ -15,6 +15,8 @@ import lemmiwinks.pathgen as pathgen
 import lemmiwinks.parslib as parslib
 import lemmiwinks.archive as archive
 
+from schema import ArchiveJsonSchema
+
 
 # Sanic imports
 from sanic import Sanic
@@ -80,12 +82,19 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
 
 
 async def archive_post_response(request):
-    urls = iter(request.json.get("urls"))
     # TODO: sanitise request
-    if not urls:
-        return response.json(dict())
+    request_json = ArchiveJsonSchema(instance=request.json)
+    try:
+        request_json.is_valid()
+    except ValidationError as e:
+        resp = {
+            "status" : "Bad request",
+            "message" : e,
+        }
+        return resp
 
-    #url = next(urls) 
+    urls = iter(request.json.get('urls'))
+        
 
     # random 8 symbol archive id
     archive_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
