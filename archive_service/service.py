@@ -1,9 +1,5 @@
-
 import asyncio
 import aiohttp
-from datetime import datetime
-import random
-import string
 from itertools import count
 import os
 
@@ -16,7 +12,7 @@ import lemmiwinks.parslib as parslib
 import lemmiwinks.archive as archive
 
 from schema import ArchiveJsonSchema
-
+from name_generator import ArchiveName
 
 # Sanic imports
 from sanic import Sanic
@@ -82,7 +78,7 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
 
 
 async def archive_post_response(request):
-    # TODO: sanitise request
+    # TODO: validate request
     request_json = ArchiveJsonSchema(instance=request.json)
     try:
         request_json.is_valid()
@@ -94,12 +90,8 @@ async def archive_post_response(request):
         return resp
 
     urls = iter(request.json.get('urls'))
-        
 
-    # random 8 symbol archive id
-    archive_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
-    archive_timestamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-    archive_name =  archive_timestamp + "_" + archive_id
+    archive_name = ArchiveName().full_name()
 
     aio_archive = ArchiveServiceLemmiwinks(urls, archive_name)
     await aio_archive.task_executor()

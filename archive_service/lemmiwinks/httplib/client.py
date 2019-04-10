@@ -102,7 +102,6 @@ class ServiceClient(abstract.AsyncClient):
         pass
 
     async def post_request(self, url, data) -> container.Response:
-        print(url, data)
         try:
             content_descriptor, url_and_status = await self.__post_response_from(url, data)
         except Exception as e:

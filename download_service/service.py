@@ -1,13 +1,15 @@
 from sanic import Sanic
 from sanic import response
 
+from schema import DownloaderJsonSchema
+
 import aiohttp
 import base64
 import json
 
 app = Sanic()
 
-class AIOClient():
+class DownloaderClient():
     def __init__(self, pool_limit=30, timeout=None,
                  proxy=None, headers=None, cookies=None):
 
@@ -49,15 +51,20 @@ class AIOClient():
 def __encode_data(content):
     return base64.b64encode(bytes(content)).decode('utf-8')
 
-async def make_response(request):
+async def downloader_post_response(request):  
 
+    request_json = DownloaderJsonSchema(instance=request.json)
+    try:
+        request_json.is_valid()
+    except ValidationError as e:
+        resp = {
+            "status" : "Bad request",
+            "message" : e,
+        }
+        return resp
     url = request.json.get("resourceURL")
 
-    # TODO: sanitise request
-    if not url:
-        return response.json(dict())
-
-    client = AIOClient(timeout=10)
+    client = DownloaderClient(timeout=10)
     content, url_and_status = await client.get_request(url)
     del client
 
@@ -69,33 +76,19 @@ async def make_response(request):
     }
     return resp
 
-async def make_info_page(request):
-    info_page = """
-    <html>
-        <head>
-            <title>Download service - Information</title>
-        </head>
-        <body>
-            <p>This is Lemmiwinks download service
-            <p>You are visiting from this IP: %s</p>
-            <p>Usage:</p>
-            <ul>
-                <li>POST request to <b>/download</b></li>
-                <li>In JSON specify 1 requested resource as <b>"mainURL"=string</b></li>
-            </ul>
-        </body>
-    </html>
-    """ % request.ip
+async def info_page_response(request):
+    with open("index.html", "r", encoding='utf-8') as f:
+        info_page = f.read()
+    info_page = info_page % request.ip
     return info_page
-
 
 @app.route('/download', methods=['POST'])
 async def post_handler(request):
-    return response.json(await make_response(request))
+    return response.json(await downloader_post_response(request))
 
 @app.route('/', methods=['GET'])
 async def get_handler(request):
-    return response.html(await make_info_page(request))
+    return response.html(await info_page_response(request))
 
 
 
