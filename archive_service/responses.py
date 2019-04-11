@@ -17,9 +17,7 @@ async def archive_post_response(request):
         raise InvalidUsage(message=INVALID_USAGE_MESSAGE)
 
     urls = iter(request.json.get('urls'))
-
     archive_name = ArchiveName().full_name()
-
     aio_archive = ArchiveServiceLemmiwinks(urls, archive_name)
     await aio_archive.task_executor()
 

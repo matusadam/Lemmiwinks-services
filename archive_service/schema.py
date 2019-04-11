@@ -12,12 +12,34 @@ class ArchiveJsonSchema():
                     "minItems":1,
                     "maxItems":maxItems,
                     "items" : {
-                        "type" : "string"
+                        "type" : "string",
+                        "maxLength": 2048
                     }
 
                 }
-            }
+            },
+            "required": ["urls"]
+        }
+        self.schema_strict = {
+            "type" : "object",
+            "properties" : {
+                "urls" : {
+                    "type" : "array",
+                    "minItems":1,
+                    "maxItems":maxItems,
+                    "items" : {
+                        "type" : "string",
+                        "maxLength": 2048
+                    }
+
+                }
+            },
+            "additionalProperties" : False,
+            "required": ["urls"]
         }
 
-    def is_valid(self, strict=True):
-        validate(instance=self.instance, schema=self.schema)
+    def is_valid(self, strict=False):
+        if strict:
+            validate(instance=self.instance, schema=self.schema_strict)
+        else:
+            validate(instance=self.instance, schema=self.schema)

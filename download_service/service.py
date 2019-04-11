@@ -33,7 +33,6 @@ async def downloader_post_response(request):
     resp = {
         "status": "ok",
         "url_and_status" : url_and_status,
-        "type" : 'TODO',
         "data" : __encode_data(content),
     }
     return resp
