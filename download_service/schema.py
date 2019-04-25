@@ -11,8 +11,11 @@ class DownloaderJsonSchema():
             "type" : "object",
             "properties" : {
                 "mainURL" : {"type" : "string"},
-                "resourceURL" : {"type" : "string"}
-            }
+                "resourceURL" : {"type" : "string"},
+                "useTor" : {"type":"boolean"}
+            },
+            "additionalProperties" : False,
+            "required": ["resourceURL"]
         }
 
     def is_valid(self, strict=True):

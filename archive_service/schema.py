@@ -15,8 +15,7 @@ class ArchiveJsonSchema():
                         "type" : "string",
                         "maxLength": 2048
                     }
-
-                }
+                },
             },
             "required": ["urls"]
         }
@@ -31,8 +30,7 @@ class ArchiveJsonSchema():
                         "type" : "string",
                         "maxLength": 2048
                     }
-
-                }
+                },
             },
             "additionalProperties" : False,
             "required": ["urls"]

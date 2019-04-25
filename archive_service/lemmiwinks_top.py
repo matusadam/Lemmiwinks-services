@@ -47,10 +47,10 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
         return responses
 
     @staticmethod
-    def __make_data_from(url):
+    def __make_data_from(url, tor):
         data = {
             "mainURL" : url,
-            "resourceURL" : url,
+            "resourceURL" : url
         }
         return data
 
