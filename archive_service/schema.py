@@ -13,7 +13,6 @@ class ArchiveJsonSchema():
                     "maxItems":maxItems,
                     "items" : {
                         "type" : "string",
-                        "maxLength": 2048
                     }
                 },
             },
