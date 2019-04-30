@@ -23,14 +23,22 @@ async def downloader_post_response(request):
 
     url = request.json.get("resourceURL")
 
-    # client = DownloaderClient(timeout=10)
-    client = TorDownloaderClient(timeout=10)
-    content, url_and_status = await client.get_request(url)
+    # client = DownloaderClient(timeout=60)
+    client = TorDownloaderClient(timeout=60)
+    try:
+        content, url_and_status = await client.get_request(url)
+    except Exception as e:
+        resp = {
+            "errorMessage" : e,
+            "url_and_status" : [],
+            "data" : "",
+        }
+    else:
+        resp = {
+            "url_and_status" : url_and_status,
+            "data" : __encode_data(content),
+        }
 
-    resp = {
-        "url_and_status" : url_and_status,
-        "data" : __encode_data(content),
-    }
     return resp
 
 async def info_page_response(request):

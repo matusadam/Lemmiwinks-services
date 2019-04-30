@@ -18,7 +18,7 @@ class ArchiveSettings(migration.MigrationSettings):
 class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
     def __init__(self, urls, archive_name):
 
-        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(pool_limit=500,timeout=10)
+        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(pool_limit=500,timeout=60)
         self.__settings = ArchiveSettings()
         self.__envelop = archive.Envelop()
         self.__archive_name = archive_name

@@ -1,5 +1,6 @@
 import requests
 import json
+import time
 
 class TestClient():
     def __init__(self, service_url):
@@ -9,7 +10,11 @@ class TestClient():
 
     def get_archive(self, urls):
         r = self.post_req(urls)
-        print("  Test number: %d, Status: %d" % (self.test_n, r.status_code))
+        if r.status_code == 200:
+            arch = r.json()['archive_path']
+            print("  Test number: %d, Status: %d, Archive: %s" % (self.test_n, r.status_code, arch))
+        else:
+            print("  Test number: %d, Status: %d" % (self.test_n, r.status_code))
         self.test_n += 1
         return r
         
@@ -25,6 +30,8 @@ if __name__ == "__main__":
         "Hidden Service lists and search engines" : "test_link_sites.json",
         "Marketplace Financial" : "test_finance.json",
         "Marketplace Commercial Services" : "test_commercial_services.json",
+        "Blogs and radios" : "test_blogs.json",
+        "Politics" : "test_politics.json"
     }
 
 
@@ -39,7 +46,11 @@ if __name__ == "__main__":
                 print("Website: %s, URL: %s" % (web_name, url) )
                 urls = list()
                 urls.append(url)
+
+                timing_start = time.time()
                 t.get_archive(urls=urls)
+                timing_end = time.time()
+                print("  archiving request time: %s" % (timing_end - timing_start))
 
             # Now request all pages from this group into single archive
             
