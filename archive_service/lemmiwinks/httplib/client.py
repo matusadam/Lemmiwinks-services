@@ -111,6 +111,7 @@ class ServiceClient(abstract.AsyncClient):
             return container.Response(content_descriptor, url_and_status)
 
     async def __post_response_from(self, url, data):
+        print(data)
         async with self.__session.post(url,
                                       json=data,
                                       headers=self.headers,

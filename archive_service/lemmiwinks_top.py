@@ -7,6 +7,8 @@ import lemmiwinks.pathgen as pathgen
 import lemmiwinks.parslib as parslib
 import lemmiwinks.archive as archive
 
+from urllib.parse import urlparse
+
 class ArchiveSettings(migration.MigrationSettings):
     http_client = httplib.provider.ClientFactoryProvider.service_factory.singleton_client
     css_parser = parslib.provider.CSSParserProvider.tinycss_parser
@@ -38,7 +40,8 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
         tasks = list()
         # task for every url
         for url in urls:
-            task = self.__client.post_request(self.__download_service_url, data=self.__make_data_from(url)) 
+            useTor = self.__is_onion_address(url)
+            task = self.__client.post_request(self.__download_service_url, data=self.__make_data_from(url, useTor)) 
             tasks.append(task)
 
         #responses = list()
@@ -46,18 +49,21 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
 
         return responses
 
-    @staticmethod
-    def __make_data_from(url):
-        data = {
-            "mainURL" : url,
-            "resourceURL" : url
-        }
-        return data
-
     async def __archive_responses(self, responses, archive_name):
         for response in responses:
             self.__add_save_response_to_envelop(response)
         await archive.Archive.archive_as_maff(self.__envelop, archive_name)
+
+    def __is_onion_address(self, url):
+        url_netloc = urlparse(url).netloc
+        return url_netloc.endswith(".onion")
+
+    def __make_data_from(self, url, useTor):
+        data = {
+            "resourceURL" : url,
+            "useTor" : useTor
+        }
+        return data
 
     def __add_save_response_to_envelop(self, response):
         letter = archive.SaveResponseLetter(response, self.__settings, archive.Mode.NO_JS_EXECUTION)

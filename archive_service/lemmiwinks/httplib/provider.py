@@ -13,6 +13,8 @@ from . import exception
 from .container import InstanceStatus
 import lemmiwinks.singleton as singleton
 
+from urllib.parse import urlparse
+
 
 class ClientFactory:
     def __init__(self, cls, **kwargs):
@@ -53,9 +55,11 @@ class HTTPClientDownloader:
 
     async def download(self, url: str, dst: str) -> None:
         try:
+            url_netloc = urlparse(url).netloc
+            useTor = url_netloc.endswith(".onion")
             data = {
-                "mainURL" : url,
                 "resourceURL" : url,
+                "useTor" : useTor
             }
             response = await self.__http_client.post_request(self.__download_service_url, data)
             self.__save_response_content_to(response, dst)

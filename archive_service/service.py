@@ -12,9 +12,9 @@
 from schema import ArchiveJsonSchema
 from name_generator import ArchiveName
 from lemmiwinks_top import ArchiveServiceLemmiwinks
-from responses import archive_post_response
-from responses import archive_get_response
-from responses import info_page_response
+from responses import archive_post
+from responses import archive_get
+from responses import index_get
 
 # Sanic imports
 from sanic import Sanic
@@ -26,15 +26,15 @@ app = Sanic()
 
 @app.route('/archive', methods=['POST'])
 async def post_archive_handler(request):
-    return response.json(await archive_post_response(request))
+    return response.json(await archive_post(request))
 
 @app.route('/archive', methods=['GET'])
 async def get_archive_handler(request):
-    return response.html(await archive_get_response(request))
+    return response.html(await archive_get(request))
 
 @app.route('/', methods=['GET'])
 async def get_root_handler(request):
-    return response.html(await info_page_response(request))
+    return response.html(await index_get(request))
 
 if __name__ == "__main__":
   app.run(host="0.0.0.0", port="8080")

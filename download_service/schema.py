@@ -10,7 +10,6 @@ class DownloaderJsonSchema():
         self.schema = {
             "type" : "object",
             "properties" : {
-                "mainURL" : {"type" : "string"},
                 "resourceURL" : {"type" : "string"},
                 "useTor" : {"type":"boolean"}
             },

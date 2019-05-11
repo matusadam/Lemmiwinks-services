@@ -36,6 +36,7 @@ class DownloaderClient():
 class TorDownloaderClient():
     def __init__(self, timeout=60, connector_url="socks5://localhost:9050"):
 
+        self.headers = {'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36'}
         self.timeout = timeout
         self.connector_url = connector_url
         connector = SocksConnector.from_url(self.connector_url, rdns=True)
@@ -46,7 +47,7 @@ class TorDownloaderClient():
         return (content, url_and_status)
 
     async def __get_response_from(self, url):
-        async with self.__session.get(url, timeout=self.timeout) as response:
+        async with self.__session.get(url, timeout=self.timeout, headers=self.headers) as response:
             url_and_status = self.__get_url_and_status_from(response)
             content = await response.content.read()
         return (content, url_and_status)

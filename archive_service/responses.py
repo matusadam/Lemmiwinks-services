@@ -8,7 +8,7 @@ from exception_messages import INVALID_USAGE_MESSAGE
 from jsonschema import ValidationError
 from sanic.exceptions import InvalidUsage
 
-async def archive_post_response(request):
+async def archive_post(request):
     # TODO: validate request
     request_json = ArchiveJsonSchema(instance=request.json)
     try:
@@ -27,7 +27,7 @@ async def archive_post_response(request):
     }
     return resp
 
-async def archive_get_response(request):
+async def archive_get(request):
     with open("archive.html", "r", encoding='utf-8') as f:
         archive_page = f.read()
     maff_files = [file for file in os.listdir() if file.endswith(".maff")]
@@ -35,7 +35,7 @@ async def archive_get_response(request):
     archive_page = archive_page % formated
     return archive_page
 
-async def info_page_response(request):
+async def index_get(request):
     with open("index.html", "r", encoding='utf-8') as f:
         info_page = f.read()
     info_page = info_page % request.ip

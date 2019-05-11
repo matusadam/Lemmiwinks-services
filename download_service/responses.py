@@ -2,7 +2,7 @@ from sanic.exceptions import InvalidUsage
 
 from schema import DownloaderJsonSchema
 from jsonschema import ValidationError
-from exception_messages import INVALID_USAGE_MESSAGE
+from exception import INVALID_USAGE_MESSAGE
 
 from client import DownloaderClient
 from client import TorDownloaderClient
@@ -22,9 +22,13 @@ async def downloader_post_response(request):
         raise InvalidUsage(message=INVALID_USAGE_MESSAGE)
 
     url = request.json.get("resourceURL")
+    useTor = request.json.get("useTor")
 
-    # client = DownloaderClient(timeout=60)
-    client = TorDownloaderClient(timeout=60)
+    if useTor:
+        client = TorDownloaderClient(timeout=60)
+    else:
+        client = DownloaderClient(timeout=60)
+
     try:
         content, url_and_status = await client.get_request(url)
     except Exception as e:
