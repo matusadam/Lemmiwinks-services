@@ -53,6 +53,40 @@ async def get_archive_download_handler(request, name):
             status=404
         )
 
+@app.route('/archive/<name>', methods=['DELETE'])
+async def delete_archive_handler(request, name):
+    # match archive name
+    m = re.match(r'[0-9]+T[0-9]+_[0-9A-Z]+\.maff', name)
+    if not m:
+        return response.json(
+            {
+                "error": "Bad request: archive name does not match",
+                "status" : 400
+            },
+            status=400
+        )
+
+    # delete archive
+    files = [f for f in os.listdir('.') if os.path.isfile(f)]
+    for f in files:
+        if name in f:
+            os.remove(f)
+            return response.json(
+                {
+                    "message" : "Archive %s has been deleted" % (f,),
+                    "status" : 200
+                },
+                status=200
+            )
+
+    # archive doesnt exist
+    return response.json(
+            {
+                "error": "Archive %s not found" % (name,),
+                "status" : 404
+            },
+            status=404
+        )
 
 @app.route('/', methods=['GET'])
 async def get_root_handler(request):
