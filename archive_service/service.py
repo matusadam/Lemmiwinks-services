@@ -5,39 +5,105 @@ import re
 from schema import ArchiveJsonSchema
 from name_generator import ArchiveName
 from lemmiwinks_top import ArchiveServiceLemmiwinks
-from responses import archive_post
-from responses import archive_get
-from responses import index_get
 
-# Sanic imports
+
 from sanic import Sanic
 from sanic import response
-# Sanic Authentication
-from sanic_auth import Auth
 
+from sanic_auth import Auth, User
+
+
+# Sanic init
 app = Sanic()
 
-@app.route('/archive', methods=['POST'])
-async def post_archive_handler(request):
-    return response.json(await archive_post(request))
+# authentication init
+app.config.AUTH_LOGIN_ENDPOINT = 'login'
+auth = Auth(app)
 
-@app.route('/archive', methods=['GET'])
-async def get_archive_handler(request):
-    return response.html(await archive_get(request))
+session = {}
+@app.middleware('request')
+async def add_session(request):
+    request['session'] = session
+
+
+# Routes
+
+@app.route('/', methods=['GET'])
+async def index(request):
+    with open("index.html", "r", encoding='utf-8') as f:
+        index_html = f.read()
+    return response.html(index_html.format(request.ip))
+
+@app.route('/login', methods=['GET', 'POST'])
+async def login(request):
+    msg_bad_login = '<b style="color:red;">Incorrect username or password</b>'
+
+    with open("login.html", "r", encoding='utf-8') as f:
+        login_html = f.read()
+
+    # TODO: db users
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        if username == 'xmatus31' and password == '11111':
+            user = User(id=1, name=username)
+            auth.login_user(request, user)
+            return response.redirect('/archive')
+        else:
+            return response.html(login_html.format(msg_bad_login))
+
+    if request.method == 'GET':
+        return response.html(login_html.format(''))
+
+@app.route('/logout')
+@auth.login_required
+async def logout(request):
+    auth.logout_user(request)
+    return response.redirect('/login')
+
+@app.route('/archive', methods=['GET', 'POST'])
+@auth.login_required
+async def archive(request):
+    with open("archive.html", "r", encoding='utf-8') as f:
+        archive_html = f.read()
+
+    post_msg = ''
+    maff_files = [file for file in os.listdir() if file.endswith(".maff")]
+    maffs = "".join(["<li>%s</li>" % file for file in maff_files])
+
+    if request.method == 'POST':
+        url = request.form.get('url')
+        archive_name = ArchiveName().full_name()
+        aio_archive = ArchiveServiceLemmiwinks([url], archive_name)
+        await aio_archive.task_executor()
+        post_msg = '<b style="color:green;">Archive created: {}</b>'.format(archive_name)
+        return response.html(archive_html.format(maffs, post_msg))
+
+    if request.method == 'GET':
+        return response.html(archive_html.format(maffs, post_msg))
+
+@app.route('/api/archive', methods=['POST'])
+@auth.login_required
+async def api_archive_post(request):
+    request_json = ArchiveJsonSchema(instance=request.json)
+    try:
+        request_json.is_valid()
+    except ValidationError as e:
+        raise InvalidUsage(message=INVALID_USAGE_MESSAGE)
+    urls = iter(request.json.get('urls'))
+    archive_name = ArchiveName().full_name()
+    aio_archive = ArchiveServiceLemmiwinks(urls, archive_name)
+    await aio_archive.task_executor()
+    resp = {
+        "status": "ok",
+        "archive_path" : archive_name,
+    }
+    return response.json(resp)
+
 
 @app.route('/archive/<name>', methods=['GET'])
-async def get_archive_download_handler(request, name):
-    # match archive name
-    m = re.match(r'[0-9]+T[0-9]+_[0-9A-Z]+\.maff', name)
-    if not m:
-        return response.json(
-            {
-                "error": "Bad request: archive name does not match",
-                "status" : 400
-            },
-            status=400
-        )
-
+@auth.login_required
+async def archive_elem(request, name):
     # return maff if exists
     files = [f for f in os.listdir('.') if os.path.isfile(f)]
     for f in files:
@@ -45,53 +111,34 @@ async def get_archive_download_handler(request, name):
             return await response.file(f)
 
     # archive doesnt exist
-    return response.json(
-            {
-                "error": "Archive %s not found" % (name,),
-                "status" : 404
-            },
-            status=404
-        )
+    with open("notfound.html", "r", encoding='utf-8') as f:
+        notfound_html = f.read()
+    
+    return response.html(notfound_html.format(name), status=404)
 
-@app.route('/archive/<name>', methods=['DELETE'])
-async def delete_archive_handler(request, name):
-    # match archive name
-    m = re.match(r'[0-9]+T[0-9]+_[0-9A-Z]+\.maff', name)
-    if not m:
-        return response.json(
-            {
-                "error": "Bad request: archive name does not match",
-                "status" : 400
-            },
-            status=400
-        )
+@app.route('/api/archive/<name>', methods=['DELETE'])
+@auth.login_required
+async def api_archive_delete(request, name):
 
-    # delete archive
-    files = [f for f in os.listdir('.') if os.path.isfile(f)]
-    for f in files:
+    maffs = [f for f in os.listdir('.') if os.path.isfile(f) and f.endswith('.maff')]
+
+    for f in maffs:
         if name in f:
-            os.remove(f)
-            return response.json(
-                {
-                    "message" : "Archive %s has been deleted" % (f,),
-                    "status" : 200
-                },
-                status=200
-            )
+            if request.method == 'DELETE':
+                os.remove(f)   
+                return response.json(
+                    {"message" : "Archive {} has been deleted".format(f), "status" : 200},
+                    status=200
+                )
 
-    # archive doesnt exist
+    # archive doesn't exist
     return response.json(
-            {
-                "error": "Archive %s not found" % (name,),
-                "status" : 404
-            },
-            status=404
-        )
+        {"error": "Archive {} not found".format(name), "status" : 404},
+        status=404
+    )
 
-@app.route('/', methods=['GET'])
-async def get_root_handler(request):
-    return response.html(await index_get(request))
 
+# run Sanic server
 if __name__ == "__main__":
   app.run(host="0.0.0.0", port="8080")
 
