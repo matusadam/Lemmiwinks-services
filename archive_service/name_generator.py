@@ -4,14 +4,18 @@ from datetime import datetime
 
 class ArchiveName():
 
-    def __init__(self, timestamp=None, urls=None):
+    def __init__(self, name=None, timestamp=None, urls=None):  
+        self._name = self.__create_name(name)
         self._timestamp = self.__create_timestamp(timestamp)
         self._urls = urls
         self._id = self.__generate_random_id()
 
-    def __generate_random_id(self):
-        archive_id = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
-        return archive_id
+    def __create_name(self, name):
+        if name == None or name == '':
+            archive_name = "unnamed"
+        else:
+            archive_name = name
+        return archive_name
 
     def __create_timestamp(self, timestamp):
         # expects datetime object as a timestamp
@@ -22,8 +26,17 @@ class ArchiveName():
 
         return archive_timestamp
 
+    def __generate_random_id(self):
+        archive_id = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(8))
+        return archive_id
+
+    @property 
     def full_name(self):
-        return "%s_%s" % (self._timestamp, self._id)
+        return "{}_{}".format(self._name, self._id)
+
+    @property 
+    def filename(self):
+        return "{}.maff".format(self.full_name)
 
     @property
     def id(self):
@@ -32,5 +45,17 @@ class ArchiveName():
     @property
     def timestamp(self):
         return self._timestamp
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def href_detail(self):
+        return "/archives/{}".format(self._id)
+
+    @property
+    def href_download(self):
+        return "/archives/{}/{}".format(self._id, self.filename)
     
     

@@ -1,17 +1,21 @@
 
 import os, re
 
-from schema import ArchiveJsonSchema
+from schema import ArchivePostSchema
 from name_generator import ArchiveName
 from lemmiwinks_top import ArchiveServiceLemmiwinks
+from utilities import Archives
+
 
 from sanic import Sanic
 from sanic import response
 from sanic_auth import Auth, User
 
 
+
 # Sanic init
 app = Sanic()
+
 
 # Sanic-auth init
 app.config.AUTH_LOGIN_ENDPOINT = 'login'
@@ -20,10 +24,6 @@ session = {}
 @app.middleware('request')
 async def add_session(request):
     request['session'] = session
-
-# TinyDB init
-db = TinyDB('db.json')
-
 
 # Sanic routes
 @app.route('/', methods=['GET'])
@@ -78,11 +78,11 @@ async def login(request):
 async def logout(request):
     """Logout current user
 
-    Logout user in this session and redirect to login page.
+    Logout user in this session and redirect to main page.
     """
 
     auth.logout_user(request)
-    return response.redirect('/login')
+    return response.redirect('/')
 
 @app.route('/archives', methods=['GET'])
 @auth.login_required
@@ -94,14 +94,19 @@ async def get_archives(request):
 
     :rtype: str
     """
-    with open("archive.html", "r", encoding='utf-8') as f:
-        archive_html = f.read()
 
-    post_msg = ''
-    maff_files = [file for file in os.listdir() if file.endswith(".maff")]
-    maffs = "".join(["<li>%s</li>" % file for file in maff_files])
+    with open("archives.html", "r", encoding='utf-8') as f:
+        html = f.read()
 
-    return response.html(archive_html.format(maffs, post_msg))
+    msg = ''
+    html_archive_list = ''
+    archives = Archives()
+    for detail in archives.details():
+        html_archive_list += '<li><a href="{}">{}</a> - ID: {} - Time created: {} - size: {}</li>'.format(
+            detail['href_detail'], detail['name'], detail['aid'], detail['ctime'], detail['size']
+        )
+
+    return response.html(html.format(html_archive_list, msg))
 
 @app.route('/archives', methods=['POST'])
 @auth.login_required
@@ -112,19 +117,25 @@ async def post_archives(request):
 
     :rtype: str
     """
-    with open("archive.html", "r", encoding='utf-8') as f:
-        archive_html = f.read()
 
-    post_msg = ''
-    maff_files = [file for file in os.listdir() if file.endswith(".maff")]
-    maffs = "".join(["<li>%s</li>" % file for file in maff_files])
-
-    url = request.form.get('url')
-    archive_name = ArchiveName().full_name()
-    aio_archive = ArchiveServiceLemmiwinks([url], archive_name)
+    form_url = request.form.get('url')
+    form_name = request.form.get('name')
+    form_forceTor = request.form.get('forceTor')
+    archive_name = ArchiveName(name=form_name, urls=form_url)
+    aio_archive = ArchiveServiceLemmiwinks([form_url], archive_name.full_name)
     await aio_archive.task_executor()
-    post_msg = '<b style="color:green;">Archive created: {}</b>'.format(archive_name)
-    return response.html(archive_html.format(maffs, post_msg))
+
+    with open("archives.html", "r", encoding='utf-8') as f:
+        html = f.read()
+    msg = '<b style="color:green;">Archive {} created.</b>'.format(archive_name)
+    html_archive_list = ''
+    archives = Archives()
+    for detail in archives.details():
+        html_archive_list += '<li><a href="{}">{}</a> - ID: {} - Time created: {} - size: {}</li>'.format(
+            detail['href_detail'], detail['name'], detail['aid'], detail['ctime'], detail['size']
+        )
+
+    return response.html(html.format(html_archive_list, msg))
 
 @app.route('/archives/<id>', methods=['GET'])
 @auth.login_required
@@ -139,21 +150,23 @@ async def archiveItem_get(request, id):
     :rtype: str
     """
 
-    result = None
-    # tady bude db query result = (SELECT * FROM archivesTable WHERE id==id) nebo tak neco
-
-    if result:
+    archives = Archives()
+    detail = archives.searchById(id)
+    if detail:
         with open("archiveDetail.html", "r", encoding='utf-8') as f:
             html = f.read()
+        html = html.format(detail['name'], detail['file'], detail['aid'], detail['ctime'], detail['size'], detail['href_download'])
+        return response.html(html)
     else:
-        # archive doesnt exist
         with open("notfound.html", "r", encoding='utf-8') as f:
             html = f.read()
-        return response.html(html.format(id), status=404)
+        html = html.format(id)
+        return response.html(html, status=404)
 
+    
 @app.route('/archives/<id>/<filename>', methods=['GET'])
 @auth.login_required
-async def archiveFile_get(request, id):
+async def archiveFile_get(request, id, filename):
     """Downloads the archive
 
     Downloads the archive given by its ID. 
@@ -166,40 +179,52 @@ async def archiveFile_get(request, id):
     :rtype: str
     """
 
+    archives = Archives()
+    detail = archives.searchById(id)
+    if detail and detail['file'] == filename:
+        return await response.file(filename)
+    else:
+        with open("notfound.html", "r", encoding='utf-8') as f:
+            html = f.read()
+        html.format(id)
+        return response.html(html, status=404)
+
+
 @app.route('/api/archives', methods=['GET'])
 @auth.login_required
 async def api_archives_get(request):
-    request_json = ArchiveJsonSchema(instance=request.json)
-    try:
-        request_json.is_valid()
-    except ValidationError as e:
-        raise InvalidUsage(message=INVALID_USAGE_MESSAGE)
-    urls = iter(request.json.get('urls'))
-    archive_name = ArchiveName().full_name()
-    aio_archive = ArchiveServiceLemmiwinks(urls, archive_name)
-    await aio_archive.task_executor()
-    resp = {
-        "status": "ok",
-        "archive_path" : archive_name,
-    }
-    return response.json(resp)
+    """Archives collection.
+
+    Gets JSON collection of all archives. Use query params.
+
+    :rtype: json
+    """
+
+    archives = Archives()
+    search_name = request.args['name'][0]
+    skip = int(request.args['skip'][0])
+    limit = int(request.args['limit'][0])
+    details = archives.searchByName(request.args['name'][0])
+    details = details[skip:skip+limit]
+
+    return response.json(details)
 
 @app.route('/api/archives', methods=['POST'])
 @auth.login_required
 async def api_archives_post(request):
-    request_json = ArchiveJsonSchema(instance=request.json)
-    try:
-        request_json.is_valid()
-    except ValidationError as e:
-        raise InvalidUsage(message=INVALID_USAGE_MESSAGE)
-    urls = iter(request.json.get('urls'))
-    archive_name = ArchiveName().full_name()
-    aio_archive = ArchiveServiceLemmiwinks(urls, archive_name)
-    await aio_archive.task_executor()
-    resp = {
-        "status": "ok",
-        "archive_path" : archive_name,
-    }
+ 
+    if ArchivePostSchema(request.json).is_valid():
+        json_urls = iter(request.json.get('urls'))
+        json_name = request.json.get('name')
+        json_forceTor = request.json.get('forceTor')
+        archive_name = ArchiveName(name=json_name, urls=json_urls)
+        aio_archive = ArchiveServiceLemmiwinks(json_urls, archive_name.full_name)
+        await aio_archive.task_executor()
+
+        return response.json(None, status=201, headers={'Location': })
+    else:
+        # 400
+
     return response.json(resp)
 
 @app.route('/api/archives/<id>', methods=['GET'])
