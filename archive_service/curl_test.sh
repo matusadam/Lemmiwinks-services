@@ -1,11 +1,24 @@
 #!/usr/bin/env bash
 
-curl -i -X POST -H 'Content-Type: application/json' -d '{"urls": ["http://www.example.org"]}' http://0.0.0.0:8080/archive
+curl -i -H -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" http://0.0.0.0:8080/api/archives
+# API GET not auth
+curl -i -X GET http://0.0.0.0:8080/api/archives
+curl -i -X GET http://0.0.0.0:8080/api/archives?name=Reddit&skip=0&limit=5
+curl -i -X GET http://0.0.0.0:8080/api/archives/id
 
-curl -i -X GET http://0.0.0.0:8080/archive/20190616T122434_P1N4FJZ9.maff
+# API GET with auth
+curl -i -X GET -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" http://0.0.0.0:8080/api/archives
+curl -i -X GET -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" 'http://0.0.0.0:8080/api/archives?name=Reddit&skip=0&limit=5'
+curl -i -X GET -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" http://0.0.0.0:8080/api/archives/id
 
-curl -i -X DELETE http://0.0.0.0:8080/archive/20190616T122434_P1N4FJZ9.maff
 
-curl -i -X POST -H 'Content-Type: application/json' -d '{"urls": ["http://3g2upl4pq6kufc4m.onion/"]}' http://0.0.0.0:8080/archive
+# API POST with auth
+curl http://0.0.0.0:8080/api/archives -i -H "Content-Type: application/json" -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" -X POST -d '{"urls" : ["http://www.example.org"], "name" : "RedditExample", "forceTor" : false}'
+curl http://0.0.0.0:8080/api/archives -i -H "Content-Type: application/json" -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" -X POST -d '{"urls" : ["http://www.wikipedia.org"], "name" : "Wikipedia", "forceTor" : false}'
+curl http://0.0.0.0:8080/api/archives -i -H "Content-Type: application/json" -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" -X POST -d '{"urls" : ["http://www.seznam.cz"], "name" : "Wikipedia", "forceTor" : false}'
 
-curl -i -X POST -H 'Content-Type: application/json' -d '{"urls": ["http://3g2upl4pq6kufc4m.onion/"]}' http://0.0.0.0:8080/archive
+# API DELETE
+curl -i -X DELETE http://0.0.0.0:8080/api/archives/id -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"
+
+# API download
+curl http://0.0.0.0:8080/api/archives/27movv2r/Wikipedia_27movv2r.maff -i -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"

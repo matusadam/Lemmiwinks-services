@@ -13,22 +13,23 @@ class Archives():
         for file in self._files:
             m = re.match(r'^([A-Za-z0-9-]+)_([a-z0-9]+)\.maff', file)
             _stats = os.stat(file)
-            file_details.append( {
+            file_details.append({
                 'file' : file,
                 'name' : m.group(1),
                 'aid' : m.group(2),
                 'ctime' : _stats.st_ctime,
                 'size' : _stats.st_size,
                 'href_download' : '/archives/{}/{}'.format(m.group(2), file),
-                'href_detail' : '/archives/{}'.format(m.group(2))}
-            )
+                'href_detail' : '/archives/{}'.format(m.group(2)),
+                'href_detail_api' : '/api/archives/{}'.format(m.group(2)) 
+            })
         return file_details
 
     def searchById(self, search_id):
         for file in self._files:
             m = re.match(r'^([A-Za-z0-9-]+)_([a-z0-9]+)\.maff', file)
             aid = m.group(2)
-            if aid == id:
+            if aid == search_id:
                 _stats = os.stat(file)
                 return {
                     'file' : file,
@@ -37,7 +38,8 @@ class Archives():
                     'ctime' : _stats.st_ctime,
                     'size' : _stats.st_size,
                     'href_download' : '/archives/{}/{}'.format(m.group(2), file),
-                    'href_detail' : '/archives/{}'.format(m.group(2))
+                    'href_detail' : '/archives/{}'.format(m.group(2)),
+                    'href_detail_api' : '/api/archives/{}'.format(m.group(2))
                 }
         # not found
         return None
@@ -56,7 +58,8 @@ class Archives():
                     'ctime' : _stats.st_ctime,
                     'size' : _stats.st_size,
                     'href_download' : '/archives/{}/{}'.format(m.group(2), file),
-                    'href_detail' : '/archives/{}'.format(m.group(2))
+                    'href_detail' : '/archives/{}'.format(m.group(2)),
+                    'href_detail_api' : '/api/archives/{}'.format(m.group(2))
                 })
         return details
 
