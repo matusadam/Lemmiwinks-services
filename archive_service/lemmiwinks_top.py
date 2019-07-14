@@ -18,33 +18,39 @@ class ArchiveSettings(migration.MigrationSettings):
     http_js_pool = httplib.ClientPool
 
 class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
-    def __init__(self, urls, archive_name):
+    def __init__(self, urls, archive_name, forceTor=False, headers={},
+        download_service_url='http://0.0.0.0:8081/api/download'):
 
-        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(pool_limit=500,timeout=60)
+        token_hdr = {"Authorization" : "Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"}
+        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(pool_limit=500,timeout=60,headers=token_hdr)
         self.__settings = ArchiveSettings()
         self.__envelop = archive.Envelop()
         self.__archive_name = archive_name
+        self.__forceTor = forceTor
+        self.__headers = headers
         self.__urls = urls
-        self.__download_service_url = 'http://0.0.0.0:8081/download'
+        self.__download_service_url = download_service_url
 
     async def task_executor(self):
-        task = self.__archive_task(self.__urls, self.__archive_name)
+        task = self.__archive_task()
         await asyncio.gather(task)
 
     @taskwrapper.task
-    async def __archive_task(self, urls, archive_name):
-        responses = await self.__post_requests(urls)
-        await self.__archive_responses(responses, archive_name)
+    async def __archive_task(self):
+        responses = await self.__post_requests()
+        await self.__archive_responses(responses, self.__archive_name)
 
-    async def __post_requests(self, urls):
+    async def __post_requests(self):
         tasks = list()
         # task for every url
-        for url in urls:
-            useTor = self.__is_onion_address(url)
+        for url in self.__urls:
+            if self.__forceTor:
+                useTor = True
+            else:
+                useTor = self.__is_onion_address(url)
             task = self.__client.post_request(self.__download_service_url, data=self.__make_data_from(url, useTor)) 
             tasks.append(task)
 
-        #responses = list()
         responses = await asyncio.gather(*tasks)
 
         return responses
@@ -59,11 +65,11 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
         return url_netloc.endswith(".onion")
 
     def __make_data_from(self, url, useTor):
-        data = {
+        return {
             "resourceURL" : url,
-            "useTor" : useTor
+            "headers" : self.__headers,
+            "useTor" : useTor,
         }
-        return data
 
     def __add_save_response_to_envelop(self, response):
         letter = archive.SaveResponseLetter(response, self.__settings, archive.Mode.NO_JS_EXECUTION)

@@ -1,1 +1,1 @@
-curl -i -X POST -H 'Content-Type: application/json' -d '{"resourceURL": "http://facebookcorewwwi.onion"}' http://0.0.0.0:8081/download
+curl -i -X POST -H 'Content-Type: application/json' -d '{"resourceURL": "http://www.example.org", "useTor" : false, "headers" : {}}' -H 'Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO' http://0.0.0.0:8081/api/download

@@ -126,8 +126,6 @@ class ServiceClient(abstract.AsyncClient):
 
     async def __get_url_and_status_from(self, response):
         url_and_status = response['url_and_status']
-        # url_and_status = [(str(record.url), record.status) for record in history]
-        # url_and_status.append((str(response.url), response.status))
         return url_and_status
 
     async def __get_content_descriptor_from(self, response):

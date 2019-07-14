@@ -70,6 +70,17 @@ class ArchivePostSchema(Schema):
                 "forceTor" : {
                     "type" : "boolean"
                 },
+                "headers" : {
+                    "type" : "object",
+                    "properties" : {
+                        "User-Agent" : {
+                            "type" : "string",
+                        },
+                        "Accept-Language" : {
+                            "type" : "string",
+                        }
+                    }
+                },
             },
             "required": ["urls", "name", "forceTor"]
         }

@@ -24,7 +24,6 @@ class DownloadPostSchema():
                             "type" : "string"
                         }
                     },
-                    "additionalProperties" : False
                 },
                 "useTor" : {
                     "type" : "boolean"

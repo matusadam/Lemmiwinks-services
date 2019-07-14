@@ -122,7 +122,7 @@ async def post_archives(request):
     form_name = request.form.get('name')
     form_forceTor = request.form.get('forceTor')
     archive_name = ArchiveName(name=form_name, urls=form_url)
-    aio_archive = ArchiveServiceLemmiwinks([form_url], archive_name.full_name)
+    aio_archive = ArchiveServiceLemmiwinks([form_url], archive_name.full_name, forceTor=form_forceTor)
     await aio_archive.task_executor()
 
     with open("archives.html", "r", encoding='utf-8') as f:
@@ -224,11 +224,12 @@ async def api_archives_get(request):
 @token_auth.auth_required
 async def api_archives_post(request):
     if ArchivePostSchema(request.json).is_valid():
-        json_urls = iter(request.json.get('urls'))
-        json_name = request.json.get('name')
-        json_forceTor = request.json.get('forceTor')
+        urls = iter(request.json.get('urls'))
+        name = request.json.get('name')
+        forceTor = request.json.get('forceTor')
+        headers = request.json.get('headers')
         archive_name = ArchiveName(name=json_name, urls=json_urls)
-        aio_archive = ArchiveServiceLemmiwinks(json_urls, archive_name.full_name)
+        aio_archive = ArchiveServiceLemmiwinks(json_urls, archive_name.full_name, forceTor=forceTor, headers=headers)
         await aio_archive.task_executor()
 
         return response.json(None, status=201, headers={'Location': archive_name.href_detail})
