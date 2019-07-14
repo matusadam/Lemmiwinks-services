@@ -13,7 +13,7 @@ curl -i -X GET -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" http:/
 
 
 # API POST with auth
-curl http://0.0.0.0:8080/api/archives -i -H "Content-Type: application/json" -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" -X POST -d '{"urls" : ["http://www.example.org"], "name" : "RedditExample", "forceTor" : false}'
+curl http://0.0.0.0:8080/api/archives -i -H "Content-Type: application/json" -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" -X POST -d '{"urls" : ["http://www.example.org"], "name" : "RedditExample", "forceTor" : false, "headers" : {}}'
 curl http://0.0.0.0:8080/api/archives -i -H "Content-Type: application/json" -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" -X POST -d '{"urls" : ["http://www.wikipedia.org"], "name" : "Wikipedia", "forceTor" : false}'
 curl http://0.0.0.0:8080/api/archives -i -H "Content-Type: application/json" -H "Authorization: Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO" -X POST -d '{"urls" : ["http://www.seznam.cz"], "name" : "Wikipedia", "forceTor" : false}'
 

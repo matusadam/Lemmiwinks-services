@@ -228,8 +228,8 @@ async def api_archives_post(request):
         name = request.json.get('name')
         forceTor = request.json.get('forceTor')
         headers = request.json.get('headers')
-        archive_name = ArchiveName(name=json_name, urls=json_urls)
-        aio_archive = ArchiveServiceLemmiwinks(json_urls, archive_name.full_name, forceTor=forceTor, headers=headers)
+        archive_name = ArchiveName(name=name, urls=urls)
+        aio_archive = ArchiveServiceLemmiwinks(urls, archive_name.full_name, forceTor=forceTor, headers=headers)
         await aio_archive.task_executor()
 
         return response.json(None, status=201, headers={'Location': archive_name.href_detail})

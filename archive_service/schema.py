@@ -65,7 +65,8 @@ class ArchivePostSchema(Schema):
                     }
                 },
                 "name" : {
-                    "type" : "string"
+                    "type" : "string",
+                    "pattern" : "^[a-zA-Z0-9-]+"
                 },
                 "forceTor" : {
                     "type" : "boolean"
@@ -82,7 +83,7 @@ class ArchivePostSchema(Schema):
                     }
                 },
             },
-            "required": ["urls", "name", "forceTor"]
+            "required": ["urls", "name", "forceTor", "headers"]
         }
 
 class ArchiveCreatedSchema(Schema):
