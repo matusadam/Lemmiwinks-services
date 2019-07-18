@@ -4,7 +4,7 @@ from sanic import Sanic
 from sanic import response
 from sanic_token_auth import SanicTokenAuth
 
-from aiohttp import ClientConnectionError
+from aiohttp import ClientConnectionError, InvalidURL
 
 # local imports
 from schema import DownloadPostSchema
@@ -31,10 +31,14 @@ async def post_handler(request):
 
         try:
             content_type, url_and_status, data = await client.get_request(resourceURL)
+        except InvalidURL as e:
+            # cannot resolve resourceURL
+            return response.json(None, status=400)
         except ClientConnectionError as e:
-            # cannot resolve URL, timeout or refused connection
+            # timeout or refused connection
             return response.json(None, status=204)
         else:
+            # OK
             return response.json(
                 {
                     "content-type" : content_type,
@@ -44,7 +48,7 @@ async def post_handler(request):
                 status=200
             )  
     else:
-        # bad request
+        # bad JSON schema
         return response.json(None, status=400)
 
 

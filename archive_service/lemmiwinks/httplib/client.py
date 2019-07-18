@@ -86,7 +86,7 @@ class ServiceClient(abstract.AsyncClient):
 
         self.timeout = timeout
         self.proxy = proxy
-        self.headers = headers
+        self.headers = {"Authorization" : "Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"}
         self.cookies = cookies
         self.__chunk_size = 4096
         

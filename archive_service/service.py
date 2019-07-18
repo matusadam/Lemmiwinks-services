@@ -1,15 +1,16 @@
-
 import os, re
-
-from schema import ArchivePostSchema
-from name_generator import ArchiveName
-from lemmiwinks_top import ArchiveServiceLemmiwinks
-from utilities import Archives
+from datetime import datetime
 
 from sanic import Sanic
 from sanic import response
 from sanic_auth import Auth, User
 from sanic_token_auth import SanicTokenAuth
+from tinydb import TinyDB, Query
+
+from schema import ArchivePostSchema
+from name_generator import ArchiveName
+from lemmiwinks_top import ArchiveServiceLemmiwinks
+from utilities import Archives
 
 # Sanic init
 app = Sanic()
@@ -34,7 +35,7 @@ async def get_index(request):
 
     :rtype: str
     """
-    with open("index.html", "r", encoding='utf-8') as f:
+    with open("www/index.html", "r", encoding='utf-8') as f:
         index_html = f.read()
     return response.html(index_html.format(request.ip))
 
@@ -45,7 +46,7 @@ async def login(request):
     Login page with login form.
     """
 
-    with open("login.html", "r", encoding='utf-8') as f:
+    with open("www/login.html", "r", encoding='utf-8') as f:
         login_html = f.read()
 
     return response.html(login_html.format(''))
@@ -58,19 +59,23 @@ async def login(request):
     else displays error message.
     """
 
-    msg_bad_login = '<b style="color:red;">Incorrect username or password</b>'
-
-    with open("login.html", "r", encoding='utf-8') as f:
-        login_html = f.read()
-
     username = request.form.get('username')
     password = request.form.get('password')
 
-    if username == 'admin' and password == 'admin':
-        user = User(id=1, name=username)
+    with open("www/login.html", "r", encoding='utf-8') as f:
+        login_html = f.read()
+
+    db = TinyDB('db/login_access')
+    q = Query()
+    result = next(iter(
+        db.search((q.username == username) & (q.password == password))
+        ), None)
+    if result:
+        user = User(id=result.get('id'),name=username)
         auth.login_user(request, user)
         return response.redirect('/')
     else:
+        msg_bad_login = '<b style="color:red;">Incorrect username or password</b>'
         return response.html(login_html.format(msg_bad_login))
 
 @app.route('/logout', methods=['GET'])
@@ -95,14 +100,14 @@ async def get_archives(request):
     :rtype: str
     """
 
-    with open("archives.html", "r", encoding='utf-8') as f:
+    with open("www/archives.html", "r", encoding='utf-8') as f:
         html = f.read()
 
     msg = ''
     html_archive_list = ''
     archives = Archives()
     for detail in archives.details():
-        html_archive_list += '<li><a href="{}">{}</a> - ID: {} - Time created: {} - size: {}</li>'.format(
+        html_archive_list += '<li><a href="{}">{}</a> - ID: {} - Time created: {} - Size: {} bytes</li>'.format(
             detail['href_detail'], detail['name'], detail['aid'], detail['ctime'], detail['size']
         )
 
@@ -118,14 +123,14 @@ async def post_archives(request):
     :rtype: str
     """
 
-    form_url = request.form.get('url')
-    form_name = request.form.get('name')
-    form_forceTor = request.form.get('forceTor')
-    archive_name = ArchiveName(name=form_name, urls=form_url)
-    aio_archive = ArchiveServiceLemmiwinks([form_url], archive_name.full_name, forceTor=form_forceTor)
+    url = request.form.get('url')
+    name = request.form.get('name')
+    forceTor = request.form.get('forceTor')
+    archive_name = ArchiveName(name=name, urls=url)
+    aio_archive = ArchiveServiceLemmiwinks([url], archive_name.full_name, forceTor=forceTor)
     await aio_archive.task_executor()
 
-    with open("archives.html", "r", encoding='utf-8') as f:
+    with open("www/archives.html", "r", encoding='utf-8') as f:
         html = f.read()
     msg = '<b style="color:green;">Archive {} created.</b>'.format(archive_name)
     html_archive_list = ''
@@ -153,12 +158,12 @@ async def archiveItem_get(request, id):
     archives = Archives()
     detail = archives.searchById(id)
     if detail:
-        with open("archiveDetail.html", "r", encoding='utf-8') as f:
+        with open("www/archiveDetail.html", "r", encoding='utf-8') as f:
             html = f.read()
         html = html.format(detail['name'], detail['file'], detail['aid'], detail['ctime'], detail['size'], detail['href_download'])
         return response.html(html)
     else:
-        with open("notfound.html", "r", encoding='utf-8') as f:
+        with open("www/notfound.html", "r", encoding='utf-8') as f:
             html = f.read()
         html = html.format(id)
         return response.html(html, status=404)
@@ -184,7 +189,7 @@ async def archiveFile_get(request, id, filename):
     if detail and detail['file'] == filename:
         return await response.file_stream(filename, headers={"Content-Type" : "application/x-maff"})
     else:
-        with open("notfound.html", "r", encoding='utf-8') as f:
+        with open("www/notfound.html", "r", encoding='utf-8') as f:
             html = f.read()
         html.format(id)
         return response.html(html, status=404)
@@ -228,8 +233,8 @@ async def api_archives_post(request):
         name = request.json.get('name')
         forceTor = request.json.get('forceTor')
         headers = request.json.get('headers')
-        archive_name = ArchiveName(name=name, urls=urls)
-        aio_archive = ArchiveServiceLemmiwinks(urls, archive_name.full_name, forceTor=forceTor, headers=headers)
+        archive_name = ArchiveName(name=json_name, urls=json_urls)
+        aio_archive = ArchiveServiceLemmiwinks(json_urls, archive_name.full_name, forceTor=forceTor, headers=headers)
         await aio_archive.task_executor()
 
         return response.json(None, status=201, headers={'Location': archive_name.href_detail})

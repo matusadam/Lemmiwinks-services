@@ -21,8 +21,7 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
     def __init__(self, urls, archive_name, forceTor=False, headers={},
         download_service_url='http://0.0.0.0:8081/api/download'):
 
-        token_hdr = {"Authorization" : "Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"}
-        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(pool_limit=500,timeout=60,headers=token_hdr)
+        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(pool_limit=500,timeout=60)
         self.__settings = ArchiveSettings()
         self.__envelop = archive.Envelop()
         self.__archive_name = archive_name
