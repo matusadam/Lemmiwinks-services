@@ -58,4 +58,10 @@ class ArchiveName():
     def href_download(self):
         return "/archives/{}/{}".format(self._id, self.filename)
     
-    
+    @property
+    def href_detail_api(self):
+        return "/api/archives/{}".format(self._id)
+
+    @property
+    def href_download_api(self):
+        return "/api/archives/{}/{}".format(self._id, self.filename)

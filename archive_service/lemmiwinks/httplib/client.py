@@ -10,7 +10,7 @@ from selenium import webdriver
 from . import container
 from . import exception
 from . import abstract
-
+from urllib.parse import urlparse
 
 class AIOClient(abstract.AsyncClient):
     def __init__(self, pool_limit=30, timeout=None,
@@ -80,14 +80,19 @@ class AIOClient(abstract.AsyncClient):
 
 class ServiceClient(abstract.AsyncClient):
     def __init__(self, pool_limit=30, timeout=None,
-                 proxy=None, headers=None, cookies=None):
+                 proxy=None, headers=None, cookies=None,
+                 api_download_url='http://0.0.0.0:8081/api/download',
+                 archive_data=None):
 
         super().__init__("{}.{}".format(__name__, self.__class__.__name__))
 
         self.timeout = timeout
         self.proxy = proxy
-        self.headers = {"Authorization" : "Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"}
         self.cookies = cookies
+
+        self.headers = {"Authorization" : "Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"}
+        self.api_download_url = api_download_url
+        self.archive_data = archive_data
         self.__chunk_size = 4096
         
 
@@ -102,38 +107,55 @@ class ServiceClient(abstract.AsyncClient):
         pass
 
     async def post_request(self, url, data) -> container.Response:
+        # use download service API for all post requests
+        data['headers'] = self.archive_data['headers']
+        if self.archive_data['forceTor']:
+            data['useTor'] = True
+        else:
+            data['useTor'] = self.__is_onion_address(data['resourceURL'])
         try:
-            content_descriptor, url_and_status = await self.__post_response_from(url, data)
+            content_descriptor, url_and_status = await self.__post_response_from(data)
         except Exception as e:
-            self._logger.error(f"Cannot connect to host {url}")
+            print(e)
             raise exception.HTTPClientConnectionFailed(e)
         else:
             return container.Response(content_descriptor, url_and_status)
 
-    async def __post_response_from(self, url, data):
-        print(data)
-        async with self.__session.post(url,
+    async def __post_response_from(self, data):
+        async with self.__session.post(self.api_download_url,
                                       json=data,
                                       headers=self.headers,
                                       timeout=self.timeout,
                                       proxy=self.proxy.url,
                                       proxy_auth=self.proxy.auth) as response:
-            raw_response = await response.json()
-            url_and_status = await self.__get_url_and_status_from(raw_response)
-            content_descriptor = await self.__get_content_descriptor_from(raw_response)
 
-        return content_descriptor, url_and_status
+            if response.status == 200:
+                url_and_status = await self.__get_url_and_status_from(response)
+                content_descriptor = await self.__get_content_descriptor_from(response)          
+            else:
+                # request nefungoval uplne, neco se nestahlo
+                url_and_status = [ ( data['resourceURL'], 500) ]
+                content_descriptor = tempfile.NamedTemporaryFile()
+            return content_descriptor, url_and_status
+
 
     async def __get_url_and_status_from(self, response):
-        url_and_status = response['url_and_status']
-        return url_and_status
+        resp_json = await response.json()
+        if resp_json and 'url_and_status' in resp_json:
+            return resp_json['url_and_status']
+    
 
     async def __get_content_descriptor_from(self, response):
-        content_descriptor = tempfile.NamedTemporaryFile()
-        response_data = base64.b64decode(response['data'])
-        content_descriptor.write(response_data)
-
+        resp_json = await response.json()
+        content_descriptor = tempfile.NamedTemporaryFile()        
+        if resp_json and 'data' in resp_json:        
+            response_data = base64.b64decode(resp_json['data'])        
+            content_descriptor.write(response_data)
         return content_descriptor
+
+    def __is_onion_address(self, url):
+        url_netloc = urlparse(url).netloc
+        return url_netloc.endswith(".onion")
 
     @abstract.AsyncClient.proxy.setter
     def proxy(self, proxy: container.Proxy):

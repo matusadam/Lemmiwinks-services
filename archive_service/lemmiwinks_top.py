@@ -1,4 +1,5 @@
 import asyncio
+
 import lemmiwinks
 import lemmiwinks.taskwrapper as taskwrapper
 import lemmiwinks.archive.migration as migration
@@ -18,17 +19,18 @@ class ArchiveSettings(migration.MigrationSettings):
     http_js_pool = httplib.ClientPool
 
 class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
-    def __init__(self, urls, archive_name, forceTor=False, headers={},
-        download_service_url='http://0.0.0.0:8081/api/download'):
+    def __init__(self, archive_data, archive_name, download_service_url='http://0.0.0.0:8081'):
 
-        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(pool_limit=500,timeout=60)
+        api_download_url = download_service_url + '/api/download'
+        self.__client = httplib.ClientFactoryProvider.service_factory.singleton_client(timeout=60, 
+        	api_download_url=api_download_url, 
+        	archive_data=archive_data)
         self.__settings = ArchiveSettings()
         self.__envelop = archive.Envelop()
         self.__archive_name = archive_name
-        self.__forceTor = forceTor
-        self.__headers = headers
-        self.__urls = urls
-        self.__download_service_url = download_service_url
+        self.__urls = archive_data['urls']
+        self.__download_service_url = download_service_url 
+
 
     async def task_executor(self):
         task = self.__archive_task()
@@ -43,11 +45,7 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
         tasks = list()
         # task for every url
         for url in self.__urls:
-            if self.__forceTor:
-                useTor = True
-            else:
-                useTor = self.__is_onion_address(url)
-            task = self.__client.post_request(self.__download_service_url, data=self.__make_data_from(url, useTor)) 
+            task = self.__client.post_request(url, data=self.__make_data_from(url)) 
             tasks.append(task)
 
         responses = await asyncio.gather(*tasks)
@@ -59,15 +57,12 @@ class ArchiveServiceLemmiwinks(lemmiwinks.Lemmiwinks):
             self.__add_save_response_to_envelop(response)
         await archive.Archive.archive_as_maff(self.__envelop, archive_name)
 
-    def __is_onion_address(self, url):
-        url_netloc = urlparse(url).netloc
-        return url_netloc.endswith(".onion")
 
-    def __make_data_from(self, url, useTor):
+    def __make_data_from(self, url):
         return {
             "resourceURL" : url,
-            "headers" : self.__headers,
-            "useTor" : useTor,
+            "headers" : {},
+            "useTor" : False,
         }
 
     def __add_save_response_to_envelop(self, response):

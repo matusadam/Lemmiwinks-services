@@ -25,6 +25,7 @@ class Archives():
             'ctime' : datetime.fromtimestamp(_stats.st_ctime).strftime('%Y-%m-%d %H:%M:%S'),
             'size' : _stats.st_size,
             'href_download' : '/archives/{}/{}'.format(m.group(2), file),
+            'href_download_api' : '/api/archives/{}/{}'.format(m.group(2), file),
             'href_detail' : '/archives/{}'.format(m.group(2)),
             'href_detail_api' : '/api/archives/{}'.format(m.group(2)) 
         }

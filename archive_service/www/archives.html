@@ -1,12 +1,26 @@
 <html>
     <head>
-        <title>Archive service - Archive list</title>
+        <title>Archive service - Archives</title>
+        <style type="text/css">
+            {}
+        </style>
     </head>
     <body>
-        <p>List of existing archives:</p>
-        <ul>
-            {}
-        </ul>
+        <h2>Archives</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>ID</th>
+                    <th>Created</th>
+                    <th>Size in bytes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {}
+            </tbody>
+        </table>
+        <h2>Create a new archive</h2>
         <form action="" method="POST">
             URL to archive: <input id="url" name="url" placeholder="http://www.example.org/" type="text" value=""><br>
             Archive name: <input id="name" name="name" type="text" value=""><br>

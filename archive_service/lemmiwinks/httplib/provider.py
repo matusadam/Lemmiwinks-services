@@ -51,18 +51,15 @@ class HTTPClientDownloader:
     def __init__(self, http_client: object):
         self._logger = logging.getLogger(f"{__name__}{__class__.__name__}")
         self.__http_client = http_client
-        self.__download_service_url = 'http://0.0.0.0:8081/api/download'
 
     async def download(self, url: str, dst: str) -> None:
         try:
-            url_netloc = urlparse(url).netloc
-            useTor = url_netloc.endswith(".onion")
             data = {
                 "resourceURL" : url,
                 "headers" : {},
-                "useTor" : useTor,
+                "useTor" : False,
             }
-            response = await self.__http_client.post_request(self.__download_service_url, data)
+            response = await self.__http_client.post_request(url, data)
             self.__save_response_content_to(response, dst)
         except Exception as e:
             self._logger.error(f"error: {e}")

@@ -1,0 +1,7 @@
+body {max-width: 800px;margin: auto;}
+.lbutton {background-color: #44AA44;border: none;color: white;padding: 15px 32px;text-align: center;text-decoration: none;display: inline-block;font-size: 16px;}
+table {border-collapse:collapse;border-spacing:0;}
+table td{padding:5px 20px;border-style:solid;border-width:1px;word-break:normal;border-color:black;}
+table th{font-weight:normal;padding:5px 20px;border-style:solid;border-width:1px;overflow:hidden;word-break:normal;border-color:black;}
+table thead{font-weight:bold;background-color:#efefef;color:#000000;text-align:left}
+table tbody{text-align:left}

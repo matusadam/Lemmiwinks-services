@@ -1,5 +1,6 @@
 import os, re
 from datetime import datetime
+import argparse
 
 from sanic import Sanic
 from sanic import response
@@ -36,8 +37,20 @@ async def get_index(request):
     :rtype: str
     """
     with open("www/index.html", "r", encoding='utf-8') as f:
-        index_html = f.read()
-    return response.html(index_html.format(request.ip))
+        index = f.read()
+    with open("www/style.css", "r", encoding='utf-8') as f:
+        style = f.read()
+
+    if auth.current_user(request):
+        with open("www/index_user.html", "r", encoding='utf-8') as f:
+            index_user = f.read()
+        return response.html(index.format(style, index_user))
+    else:
+        # show login to guest
+        with open("www/index_guest.html", "r", encoding='utf-8') as f:
+            index_guest = f.read()
+        return response.html(index.format(style, index_guest))
+
 
 @app.route('/login', methods=['GET'])
 async def login(request):
@@ -45,11 +58,14 @@ async def login(request):
 
     Login page with login form.
     """
-
-    with open("www/login.html", "r", encoding='utf-8') as f:
-        login_html = f.read()
-
-    return response.html(login_html.format(''))
+    with open("www/style.css", "r", encoding='utf-8') as f:
+        style = f.read()
+    if auth.current_user(request):
+        return response.redirect('/')
+    else:
+        with open("www/login.html", "r", encoding='utf-8') as f:
+            login = f.read()
+        return response.html(login.format(style, ''))
 
 @app.route('/login', methods=['POST'])
 async def login(request):
@@ -63,7 +79,9 @@ async def login(request):
     password = request.form.get('password')
 
     with open("www/login.html", "r", encoding='utf-8') as f:
-        login_html = f.read()
+        login = f.read()
+    with open("www/style.css", "r", encoding='utf-8') as f:
+        style = f.read()
 
     db = TinyDB('db/login_access')
     q = Query()
@@ -76,7 +94,7 @@ async def login(request):
         return response.redirect('/')
     else:
         msg_bad_login = '<b style="color:red;">Incorrect username or password</b>'
-        return response.html(login_html.format(msg_bad_login))
+        return response.html(login.format(style, msg_bad_login))
 
 @app.route('/logout', methods=['GET'])
 @auth.login_required
@@ -102,16 +120,18 @@ async def get_archives(request):
 
     with open("www/archives.html", "r", encoding='utf-8') as f:
         html = f.read()
+    with open("www/style.css", "r", encoding='utf-8') as f:
+        style = f.read()
 
     msg = ''
     html_archive_list = ''
     archives = Archives()
     for detail in archives.details():
-        html_archive_list += '<li><a href="{}">{}</a> - ID: {} - Time created: {} - Size: {} bytes</li>'.format(
+        html_archive_list += '<tr><th><a href="{}">{}</a></th><th>{}</th><th>{}</th><th>{}</th></tr>'.format(
             detail['href_detail'], detail['name'], detail['aid'], detail['ctime'], detail['size']
         )
 
-    return response.html(html.format(html_archive_list, msg))
+    return response.html(html.format(style, html_archive_list, msg))
 
 @app.route('/archives', methods=['POST'])
 @auth.login_required
@@ -122,29 +142,36 @@ async def post_archives(request):
 
     :rtype: str
     """
-
-    url = request.form.get('url')
-    name = request.form.get('name')
-    forceTor = request.form.get('forceTor')
-    archive_name = ArchiveName(name=name, urls=url)
-    aio_archive = ArchiveServiceLemmiwinks([url], archive_name.full_name, forceTor=forceTor)
+    archive_data = {
+        "urls" : [ request.form.get('url') ],
+        "name" : request.form.get('name'),
+        "forceTor" : request.form.get('forceTor'),
+        "headers" : {}
+    }
+    archive_name = ArchiveName(name=archive_data['name'], urls=archive_data['urls'])
+    aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
+        archive_name=archive_name.full_name,
+        download_service_url=args.download_service_url)
     await aio_archive.task_executor()
 
     with open("www/archives.html", "r", encoding='utf-8') as f:
         html = f.read()
+    with open("www/style.css", "r", encoding='utf-8') as f:
+        style = f.read()
+
     msg = '<b style="color:green;">Archive {} created.</b>'.format(archive_name)
     html_archive_list = ''
     archives = Archives()
     for detail in archives.details():
-        html_archive_list += '<li><a href="{}">{}</a> - ID: {} - Time created: {} - size: {}</li>'.format(
+        html_archive_list += '<tr><th><a href="{}">{}</a></th><th>{}</th><th>{}</th><th>{}</th></tr>'.format(
             detail['href_detail'], detail['name'], detail['aid'], detail['ctime'], detail['size']
         )
 
-    return response.html(html.format(html_archive_list, msg))
+    return response.html(html.format(style, html_archive_list, msg))
 
 @app.route('/archives/<id>', methods=['GET'])
 @auth.login_required
-async def archiveItem_get(request, id):
+async def get_archive_item(request, id):
     """Archive item details
 
     Gets HTML page with archive given by its ID. Contains file download link.
@@ -154,13 +181,14 @@ async def archiveItem_get(request, id):
 
     :rtype: str
     """
-
+    with open("www/style.css", "r", encoding='utf-8') as f:
+        style = f.read()
     archives = Archives()
     detail = archives.searchById(id)
     if detail:
         with open("www/archiveDetail.html", "r", encoding='utf-8') as f:
             html = f.read()
-        html = html.format(detail['name'], detail['file'], detail['aid'], detail['ctime'], detail['size'], detail['href_download'])
+        html = html.format(style, detail['name'], detail['file'], detail['aid'], detail['ctime'], detail['size'], detail['href_download'])
         return response.html(html)
     else:
         with open("www/notfound.html", "r", encoding='utf-8') as f:
@@ -171,7 +199,7 @@ async def archiveItem_get(request, id):
     
 @app.route('/archives/<id>/<filename>', methods=['GET'])
 @auth.login_required
-async def archiveFile_get(request, id, filename):
+async def get_archive_file(request, id, filename):
     """Downloads the archive
 
     Downloads the archive given by its ID. 
@@ -229,15 +257,32 @@ async def api_archives_get(request):
 @token_auth.auth_required
 async def api_archives_post(request):
     if ArchivePostSchema(request.json).is_valid():
-        urls = iter(request.json.get('urls'))
-        name = request.json.get('name')
-        forceTor = request.json.get('forceTor')
-        headers = request.json.get('headers')
-        archive_name = ArchiveName(name=json_name, urls=json_urls)
-        aio_archive = ArchiveServiceLemmiwinks(json_urls, archive_name.full_name, forceTor=forceTor, headers=headers)
-        await aio_archive.task_executor()
+        archive_data = {
+            "urls" : request.json.get('urls'),
+            "name" : request.json.get('name'),
+            "forceTor" : request.json.get('forceTor'),
+            "headers" : request.json.get('headers')
+        }
+        archive_name = ArchiveName(name=archive_data['name'], urls=archive_data['urls'])
 
-        return response.json(None, status=201, headers={'Location': archive_name.href_detail})
+        if 'args' in globals():
+            aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
+                archive_name=archive_name.full_name,
+                download_service_url=args.download_service_url)
+        else:
+            aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
+                archive_name=archive_name.full_name,
+                download_service_url='http://0.0.0.0:8081')
+
+
+        try:
+            await aio_archive.task_executor()
+        except Exception as e:
+            # something went wrong, archive not created
+            print(e)
+            return response.json(None, status=204)
+        else:
+            return response.json(None, status=201, headers={'Location': archive_name.href_detail_api})
     else:
         # bad request
         return response.json(None, status=400)
@@ -295,8 +340,14 @@ async def api_archiveFile_get(request, id, filename):
         return response.json(None, status=404)
 
 
-# run Sanic server
+# parse command line arguments and run Sanic server
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Start the archive service')
+    parser.add_argument('--download_service_url', type=str, default='http://0.0.0.0:8081',
+                    help='Download service URL to be used by this service')
+    args = parser.parse_args()
+    print(args.download_service_url)
+
     app.run(host="0.0.0.0", port="8080")
 
 
