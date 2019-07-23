@@ -27,10 +27,8 @@ class DownloaderClient():
 
     async def __get_connector(self):
         if self.useTor:
-            print("socks-connector Tor", self.__class__)
             return SocksConnector.from_url(self.connector_url, rdns=True)
         else:
-            print("normal TCP connector", self.__class__)
             return aiohttp.TCPConnector(limit=self.pool_limit)
 
     @staticmethod

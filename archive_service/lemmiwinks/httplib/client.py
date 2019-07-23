@@ -90,7 +90,7 @@ class ServiceClient(abstract.AsyncClient):
         self.proxy = proxy
         self.cookies = cookies
 
-        self.headers = {"Authorization" : "Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"}
+        self.headers = headers
         self.api_download_url = api_download_url
         if archive_data:
         	self.archive_data = archive_data

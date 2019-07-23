@@ -1,6 +1,7 @@
 import os, re
 from datetime import datetime
 import argparse
+import zipfile
 
 from sanic import Sanic
 from sanic import response
@@ -142,24 +143,35 @@ async def post_archives(request):
 
     :rtype: str
     """
+    print(request.form.get('forceTor'))
+    if request.form.get('forceTor'):
+        _forceTor = True
+    else:
+        _forceTor = False
+
     archive_data = {
         "urls" : [ request.form.get('url') ],
         "name" : request.form.get('name'),
-        "forceTor" : request.form.get('forceTor'),
+        "forceTor" : _forceTor,
         "headers" : {}
     }
-    archive_name = ArchiveName(name=archive_data['name'], urls=archive_data['urls'])
-    aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
-        archive_name=archive_name.full_name,
-        download_service_url=args.download_service_url)
-    await aio_archive.task_executor()
+    if ArchivePostSchema(archive_data).is_valid():
+        archive_name = ArchiveName(name=archive_data['name'], urls=archive_data['urls'])
+        aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
+            archive_name=archive_name.full_name,
+            download_service_url=args.download_service_url)
+        await aio_archive.task_executor()
+        msg = '<b style="color:green;">Archive {} created.</b>'.format(archive_name)
+        status = 201
+    else:
+        msg = '<b style="color:red;">Incorrect form request.</b>'
+        status = 400
 
     with open("www/archives.html", "r", encoding='utf-8') as f:
         html = f.read()
     with open("www/style.css", "r", encoding='utf-8') as f:
         style = f.read()
 
-    msg = '<b style="color:green;">Archive {} created.</b>'.format(archive_name)
     html_archive_list = ''
     archives = Archives()
     for detail in archives.details():
@@ -167,7 +179,8 @@ async def post_archives(request):
             detail['href_detail'], detail['name'], detail['aid'], detail['ctime'], detail['size']
         )
 
-    return response.html(html.format(style, html_archive_list, msg))
+    return response.html(html.format(style, html_archive_list, msg), status=status)
+
 
 @app.route('/archives/<id>', methods=['GET'])
 @auth.login_required
@@ -346,7 +359,6 @@ if __name__ == "__main__":
     parser.add_argument('--download_service_url', type=str, default='http://0.0.0.0:8081',
                     help='Download service URL to be used by this service')
     args = parser.parse_args()
-    print(args.download_service_url)
 
     app.run(host="0.0.0.0", port="8080")
 

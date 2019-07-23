@@ -2,7 +2,6 @@ import base64
 
 from sanic import Sanic
 from sanic import response
-from sanic_token_auth import SanicTokenAuth
 
 from aiohttp import ClientConnectionError, InvalidURL
 
@@ -13,18 +12,13 @@ from client import DownloaderClient
 # Sanic init
 app = Sanic()
 
-# Sanic-Token-Auth for API
-token_auth = SanicTokenAuth(app, secret_key='Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO')
 
 @app.route('/api/download', methods=['POST'])
-@token_auth.auth_required
 async def post_handler(request):
     if DownloadPostSchema(request.json).is_valid():
         resourceURL = request.json.get('resourceURL')
         headers = request.json.get('headers')
         useTor = request.json.get('useTor')
-
-        print("useTor: " + str(useTor))
 
         client = DownloaderClient(timeout=60, headers=headers, useTor=useTor)
 
