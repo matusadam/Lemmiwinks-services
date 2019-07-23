@@ -92,7 +92,13 @@ class ServiceClient(abstract.AsyncClient):
 
         self.headers = {"Authorization" : "Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO"}
         self.api_download_url = api_download_url
-        self.archive_data = archive_data
+        if archive_data:
+        	self.archive_data = archive_data
+        else:
+        	self.archive_data = {
+        		'forceTor' : False,
+        		'headers' : {},
+        	}
         self.__chunk_size = 4096
         
 

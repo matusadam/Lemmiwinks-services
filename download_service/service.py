@@ -8,7 +8,7 @@ from aiohttp import ClientConnectionError, InvalidURL
 
 # local imports
 from schema import DownloadPostSchema
-from client import DownloaderClient, TorDownloaderClient
+from client import DownloaderClient
 
 # Sanic init
 app = Sanic()
@@ -24,18 +24,19 @@ async def post_handler(request):
         headers = request.json.get('headers')
         useTor = request.json.get('useTor')
 
-        if useTor:
-            client = TorDownloaderClient(timeout=60, headers=headers)
-        else:
-            client = DownloaderClient(timeout=60, headers=headers)
+        print("useTor: " + str(useTor))
+
+        client = DownloaderClient(timeout=60, headers=headers, useTor=useTor)
 
         try:
             content_type, url_and_status, data = await client.get_request(resourceURL)
         except InvalidURL as e:
             # cannot resolve resourceURL
+            print(e)
             return response.json(None, status=400)
         except ClientConnectionError as e:
             # timeout or refused connection
+            print(e)
             return response.json(None, status=204)
         else:
             # OK

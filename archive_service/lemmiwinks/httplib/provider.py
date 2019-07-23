@@ -57,7 +57,7 @@ class HTTPClientDownloader:
             data = {
                 "resourceURL" : url,
                 "headers" : {},
-                "useTor" : False,
+                "useTor" : True,
             }
             response = await self.__http_client.post_request(url, data)
             self.__save_response_content_to(response, dst)
