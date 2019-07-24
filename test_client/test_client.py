@@ -3,28 +3,37 @@ import json
 import time
 
 class TestClient():
-    def __init__(self, service_url):
+    def __init__(self, service_host, headers):
         self.session = requests.Session()
-        self.service_url = service_url
-        self.test_n = 1
+        self.service_host = service_host
+        self.api_archives_url = service_host + '/api/archives'
+        self._test_number = 1
+        self.headers = headers
 
-    def get_archive(self, urls):
-        r = self.post_req(urls)
-        if r.status_code == 200:
-            arch = r.json()['archive_path']
-            print("  Test number: %d, Status: %d, Archive: %s" % (self.test_n, r.status_code, arch))
+    def get_archive(self, data):
+        r = self.post_req(data)
+        if r.status_code == 201:
+            location = r.headers.get("Location")
+            print("  Test number: %d, Status: %d, Archive: %s" % (self._test_number, r.status_code, location))
         else:
-            print("  Test number: %d, Status: %d" % (self.test_n, r.status_code))
-        self.test_n += 1
+            print("  Test number: %d, Status: %d" % (self._test_number, r.status_code))
+        self._test_number += 1
         return r
         
-    def post_req(self, urls):
-        r = self.session.post(self.service_url, json={"urls":urls})
+    def post_req(self, data):
+        r = self.session.post(self.api_archives_url, json=data, headers=self.headers)
         return r
+
+    @property
+    def test_number(self):
+       	return self._test_number
+       
+
         
 if __name__ == "__main__":
 
-    t = TestClient(service_url="http://0.0.0.0:8080/archive")
+    auth_headers = {'Authorization': 'Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO'}
+    t = TestClient(service_host="http://0.0.0.0:8080", headers=auth_headers)
 
     test_files_dict = {
         "Hidden Service lists and search engines" : "test_link_sites.json",
@@ -33,7 +42,6 @@ if __name__ == "__main__":
         "Blogs and radios" : "test_blogs.json",
         "Politics" : "test_politics.json"
     }
-
 
     for tests_name, tests_file in test_files_dict.items():
         print("======================================================================")
@@ -44,15 +52,17 @@ if __name__ == "__main__":
             # Get archives for each individual page
             for web_name, url in tests_json.items():
                 print("Website: %s, URL: %s" % (web_name, url) )
-                urls = list()
-                urls.append(url)
+                data = {
+                    'urls' : [ url ],
+                    'name' : "DeepWebTest-{}".format(t.test_number),
+                    'headers' : {},
+                    'forceTor' : True,
+                }
 
                 timing_start = time.time()
-                t.get_archive(urls=urls)
+                t.get_archive(data=data)
                 timing_end = time.time()
                 print("  archiving request time: %s" % (timing_end - timing_start))
-
-            # Now request all pages from this group into single archive
             
 
 
