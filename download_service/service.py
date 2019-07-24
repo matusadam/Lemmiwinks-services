@@ -14,7 +14,7 @@ app = Sanic()
 
 
 @app.route('/api/download', methods=['POST'])
-async def post_handler(request):
+async def api_post_download(request):
     if DownloadPostSchema(request.json).is_valid():
         resourceURL = request.json.get('resourceURL')
         headers = request.json.get('headers')
@@ -48,8 +48,8 @@ async def post_handler(request):
 
 
 @app.route('/', methods=['GET'])
-async def get_handler(request):
-    with open("index.html", "r", encoding='utf-8') as f:
+async def get_index(request):
+    with open("www/index.html", "r", encoding='utf-8') as f:
         html = f.read()
     html = html.format(request.ip)
     return response.html(html)

@@ -4,6 +4,7 @@ from service import app
 def test_index():
     request, response = app.test_client.get('/')
     assert response.status == 200
+    assert 'text/html' in response.headers.get('content-type')
 
 def test_api_unauth():
     data = {
@@ -34,7 +35,12 @@ def test_api_auth():
     assert response.status == 200
     assert response.headers.get('content-type') == 'application/json'
 
-    request, response = app.test_client.post('/api/archives', json=data, headers=auth_headers)
+    request, response = app.test_client.post('/api/archives', headers=auth_headers, json={
+        "urls" : ["http://www.example.org"],
+        "name" : "ArchiveFromTests",
+        "headers" : {},
+        "forceTor" : False,
+    })
     assert response.status == 201
     archive_location = response.headers['location']
 
@@ -43,10 +49,56 @@ def test_api_auth():
     assert response.headers.get('content-type') == 'application/json'
     archive_detail = json.loads(response.text)
     assert 'href_download_api' in archive_detail
+    assert 'href_detail_api' in archive_detail
 
     request, response = app.test_client.get(archive_detail['href_download_api'], headers=auth_headers)
     assert response.status == 200
     assert response.headers.get('content-type') == 'application/x-maff'
+
+    request, response = app.test_client.delete(archive_detail['href_detail_api'], headers=auth_headers)
+    assert response.status == 204
+
+def test_api_bad_requests():
+    auth_headers = {'Authorization': 'Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO'}
+    # missing urls
+    request, response = app.test_client.post('/api/archives', headers=auth_headers, json=
+        {
+            "name" : "ArchiveFromTests",
+            "headers" : {},
+            "forceTor" : False,
+        })
+    assert response.status == 400
+    assert response.headers.get('content-type') == 'application/json'
+
+    # missing name
+    request, response = app.test_client.post('/api/archives', headers=auth_headers, json=
+        {
+            "urls" : ["http://www.example.org"],
+            "headers" : {},
+            "forceTor" : False,
+        })
+    assert response.status == 400
+    assert response.headers.get('content-type') == 'application/json'
+
+    # missing headers
+    request, response = app.test_client.post('/api/archives', headers=auth_headers, json=
+        {
+            "urls" : ["http://www.example.org"],
+            "name" : "ArchiveFromTests",
+            "forceTor" : False,
+        })
+    assert response.status == 400
+    assert response.headers.get('content-type') == 'application/json'
+
+    # json is empty
+    request, response = app.test_client.post('/api/archives', headers=auth_headers, json=None)
+    assert response.status == 400
+    assert response.headers.get('content-type') == 'application/json'
+
+    # json is a list
+    request, response = app.test_client.post('/api/archives', headers=auth_headers, json=[])
+    assert response.status == 400
+    assert response.headers.get('content-type') == 'application/json'
 
 if __name__ == "__main__":
     # index page
@@ -58,4 +110,7 @@ if __name__ == "__main__":
     # authorized access
     test_api_auth()
 
-    print('Archive service tests finished')
+    # bad requests
+    test_api_bad_requests()
+
+    print('Tests finished')

@@ -3,12 +3,10 @@ from aiohttp_socks import SocksConnector
 
 class DownloaderClient():
     def __init__(self, pool_limit=30, timeout=60,
-                 proxy=None, headers=None, cookies=None, useTor=False):
+                headers=None, useTor=False):
         self.pool_limit = pool_limit
         self.timeout = timeout
-        self.proxy = proxy
         self.headers = headers
-        self.cookies = cookies
         self.useTor = useTor
         self.connector_url = "socks5://localhost:9050"
 
