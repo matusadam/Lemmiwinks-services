@@ -157,9 +157,14 @@ async def post_archives(request):
     }
     if ArchivePostSchema(archive_data).is_valid():
         archive_name = ArchiveName(name=archive_data['name'], urls=archive_data['urls'])
-        aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
-            archive_name=archive_name.full_name,
-            download_service_url=args.download_service_url)
+        if 'args' in globals():
+            aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
+                archive_name=archive_name.full_name,
+                download_service_url=args.download_service_url)
+        else:
+            aio_archive = ArchiveServiceLemmiwinks(archive_data=archive_data, 
+                archive_name=archive_name.full_name,
+                download_service_url='http://0.0.0.0:8081')
         await aio_archive.task_executor()
         msg = '<b style="color:green;">Archive {} created.</b>'.format(archive_name)
         status = 201
@@ -238,7 +243,7 @@ async def get_archive_file(request, id, filename):
 
 @app.route('/api/archives', methods=['GET'])
 @token_auth.auth_required
-async def api_archives_get(request):
+async def api_get_archives(request):
     """Archives collection.
 
     Gets JSON collection of all archives. Use query params.
@@ -268,7 +273,7 @@ async def api_archives_get(request):
 
 @app.route('/api/archives', methods=['POST'])
 @token_auth.auth_required
-async def api_archives_post(request):
+async def api_post_archives(request):
     if ArchivePostSchema(request.json).is_valid():
         archive_data = {
             "urls" : request.json.get('urls'),
@@ -287,7 +292,6 @@ async def api_archives_post(request):
                 archive_name=archive_name.full_name,
                 download_service_url='http://0.0.0.0:8081')
 
-
         try:
             await aio_archive.task_executor()
         except Exception as e:
@@ -302,7 +306,7 @@ async def api_archives_post(request):
         
 @app.route('/api/archives/<id>', methods=['GET'])
 @token_auth.auth_required
-async def api_archiveItem_get(request, id):
+async def api_get_archive_item(request, id):
     """Archive item details
 
     Gets JSON representation of archive item.
@@ -322,7 +326,7 @@ async def api_archiveItem_get(request, id):
 
 @app.route('/api/archives/<id>', methods=['DELETE'])
 @token_auth.auth_required
-async def api_archiveItem_delete(request, id):
+async def api_delete_archive_item(request, id):
 
     archives = Archives()
     detail = archives.searchById(id)
@@ -332,7 +336,7 @@ async def api_archiveItem_delete(request, id):
 
 @app.route('/api/archives/<id>/<filename>', methods=['GET'])
 @token_auth.auth_required
-async def api_archiveFile_get(request, id, filename):
+async def api_get_archive_file(request, id, filename):
     """Downloads the archive
 
     Downloads the archive given by its ID. 
