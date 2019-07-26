@@ -184,7 +184,8 @@ class CSSFileHandler(_RecursiveEntityHandler):
         self._src_register.update({url: path})
 
     async def _get_response_from(self, url):
-        return await self.__client.get_request(url)
+        data = {"resourceURL" : url}
+        return await self.__client.post_request(url, data)
 
     async def _process_entity_recursively_from(self, response):
         url = response.requested_url
@@ -243,7 +244,8 @@ class HTMLFileHandler(_HTMLEntityHandler):
         self.__settings = settings
 
     async def _get_response_from(self, url):
-        return await self.__client.get_request(url)
+        data = {"resourceURL" : url}
+        return await self.__client.post_request(url, data)
 
     async def _process_entity_recursively_from(self, response):
         url = response.requested_url

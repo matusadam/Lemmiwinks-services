@@ -1,7 +1,8 @@
 import os, re
 from datetime import datetime
 import argparse
-import zipfile
+from functools import wraps
+import base64
 
 from sanic import Sanic
 from sanic import response
@@ -17,16 +18,41 @@ from utilities import Archives
 # Sanic init
 app = Sanic()
 
-# Sanic-auth for browser
+# Sanic-auth
 app.config.AUTH_LOGIN_ENDPOINT = 'login'
 auth = Auth(app)
+
 session = {}
 @app.middleware('request')
 async def add_session(request):
     request['session'] = session
 
 # Sanic-Token-Auth for API
-token_auth = SanicTokenAuth(app, secret_key='Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO')
+# token_auth = SanicTokenAuth(app, secret_key='Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO')
+
+# API auth
+def api_auth_required():
+    def decorator(f):
+        @wraps(f)
+        async def privileged(request, *args, **kwargs):
+            # Authorization Basic
+            _, auth_token = request.token.split(' ')
+            decoded = base64.b64decode(auth_token).decode("utf-8")
+            username, password = decoded.split(":")
+
+            db = TinyDB('db/login_access')
+            q = Query()
+            result = next(iter(
+                db.search((q.username == username) & (q.password == password))
+            ), None)
+            if result:
+                # the user is authorized.
+                return await f(request, *args, **kwargs)
+            else:
+                # the user is not authorized.
+                return response.json(None, 401)
+        return privileged
+    return decorator
 
 # Sanic routes
 @app.route('/', methods=['GET'])
@@ -72,7 +98,8 @@ async def login(request):
 async def login(request):
     """Authenticate a user
 
-    Checks and authenticates a user. Redirects to the main page on corrent login,
+    Checks and authenticates a user and saves into session. 
+    Redirects to the main page on corrent login,
     else displays error message.
     """
 
@@ -111,7 +138,7 @@ async def logout(request):
 @app.route('/archives', methods=['GET'])
 @auth.login_required
 async def get_archives(request):
-    """Archives collection and POST form.
+    """Archives collection.
 
     Gets HTML page with a list of all archives and a POST form for creating
     a new archive from given URL and options.
@@ -137,9 +164,10 @@ async def get_archives(request):
 @app.route('/archives', methods=['POST'])
 @auth.login_required
 async def post_archives(request):
-    """Create new archive
+    """Posts form data for a new archive creation
 
-    Creates new archive from requested URL and options.
+    A new archive will be created from given URLs. The view will
+    be updated with a status message.
 
     :rtype: str
     """
@@ -236,13 +264,14 @@ async def get_archive_file(request, id, filename):
         return await response.file_stream(filename, headers={"Content-Type" : "application/x-maff"})
     else:
         with open("www/notfound.html", "r", encoding='utf-8') as f:
-            html = f.read()
-        html.format(id)
-        return response.html(html, status=404)
+            html = f.read()   
+        return response.html(html.format(filename), status=404)
 
+
+# API routes
 
 @app.route('/api/archives', methods=['GET'])
-@token_auth.auth_required
+@api_auth_required()
 async def api_get_archives(request):
     """Archives collection.
 
@@ -272,8 +301,15 @@ async def api_get_archives(request):
     return response.json(details)
 
 @app.route('/api/archives', methods=['POST'])
-@token_auth.auth_required
+@api_auth_required()
 async def api_post_archives(request):
+    """Posts data for new archive creation
+
+    A new archive will be created from given URLs. On success
+    the archive reference will be in the location response header.
+
+    :rtype: json
+    """
     if ArchivePostSchema(request.json).is_valid():
         archive_data = {
             "urls" : request.json.get('urls'),
@@ -305,11 +341,11 @@ async def api_post_archives(request):
         return response.json(None, status=400)
         
 @app.route('/api/archives/<id>', methods=['GET'])
-@token_auth.auth_required
+@api_auth_required()
 async def api_get_archive_item(request, id):
-    """Archive item details
+    """Gets archive item details
 
-    Gets JSON representation of archive item.
+    Gets JSON representation of archive item given by id.
 
     :param id: 
     :type id: int
@@ -325,8 +361,17 @@ async def api_get_archive_item(request, id):
         return response.json(None, status=404)
 
 @app.route('/api/archives/<id>', methods=['DELETE'])
-@token_auth.auth_required
+@api_auth_required()
 async def api_delete_archive_item(request, id):
+    """Deletes the archive
+
+    Deletes the archive given by its ID. 
+
+    :param id: 
+    :type id: int
+
+    :rtype: str
+    """
 
     archives = Archives()
     detail = archives.searchById(id)
@@ -335,11 +380,11 @@ async def api_delete_archive_item(request, id):
     return response.json(None, status=204)
 
 @app.route('/api/archives/<id>/<filename>', methods=['GET'])
-@token_auth.auth_required
+@api_auth_required()
 async def api_get_archive_file(request, id, filename):
     """Downloads the archive
 
-    Downloads the archive given by its ID. 
+    Downloads the archive file given by its ID and filename. 
 
     :param id: 
     :type id: int

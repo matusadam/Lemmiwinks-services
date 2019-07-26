@@ -28,8 +28,8 @@ class AIOClient(abstract.AsyncClient):
         self.__session = aiohttp.ClientSession(connector=connector,
                                                cookies=cookies)
 
-    def __del__(self):
-        self.__session.close()
+    async def __del__(self):
+        await self.__session.close()
 
     async def get_request(self, url) -> container.Response:
         try:
@@ -110,7 +110,7 @@ class ServiceClient(abstract.AsyncClient):
         self.__session.close()
 
     async def get_request(self, url) -> container.Response:
-        pass
+        raise NotImplemented
 
     async def post_request(self, url, data) -> container.Response:
         # use download service API for all post requests

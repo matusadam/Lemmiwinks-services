@@ -23,8 +23,7 @@ def test_api_unauth():
     assert response.status == 401
 
 def test_api_auth():
-    # auth header
-    auth_headers = {'Authorization': 'Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO'}
+    auth_headers = {'Authorization': 'Basic YWRtaW46YWRtaW4='}
     data = {
         "urls" : ["http://www.example.org"],
         "name" : "ArchiveFromTests",
@@ -59,7 +58,7 @@ def test_api_auth():
     assert response.status == 204
 
 def test_api_bad_requests():
-    auth_headers = {'Authorization': 'Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO'}
+    auth_headers = {'Authorization': 'Basic YWRtaW46YWRtaW4='}
     # missing urls
     request, response = app.test_client.post('/api/archives', headers=auth_headers, json=
         {
@@ -103,14 +102,10 @@ def test_api_bad_requests():
 if __name__ == "__main__":
     # index page
     test_index()
-
     # unauthorized access to archives, post archive and get archive
     test_api_unauth()
-
     # authorized access
     test_api_auth()
-
     # bad requests
     test_api_bad_requests()
-
     print('Tests finished')
