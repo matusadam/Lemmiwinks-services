@@ -11,16 +11,15 @@ class TestClient():
         self.headers = headers
 
     def get_archive(self, data):
-        r = self.post_req(data)
+        r = self.post_request(data)
+        print("  #%d, Status: %d" % (self._test_number, r.status_code))
         if r.status_code == 201:
             location = r.headers.get("Location")
-            print("  Test number: %d, Status: %d, Archive: %s" % (self._test_number, r.status_code, location))
-        else:
-            print("  Test number: %d, Status: %d" % (self._test_number, r.status_code))
+            print("  Location: %s" % (location))
         self._test_number += 1
         return r
         
-    def post_req(self, data):
+    def post_request(self, data):
         r = self.session.post(self.api_archives_url, json=data, headers=self.headers)
         return r
 
@@ -29,10 +28,9 @@ class TestClient():
        	return self._test_number
        
 
-        
 if __name__ == "__main__":
 
-    auth_headers = {'Authorization': 'Token Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO'}
+    auth_headers = {'Authorization': 'Basic YWRtaW46YWRtaW4='}
     t = TestClient(service_host="http://0.0.0.0:8080", headers=auth_headers)
 
     test_files_dict = {
