@@ -27,8 +27,7 @@ session = {}
 async def add_session(request):
     request['session'] = session
 
-# Sanic-Token-Auth for API
-# token_auth = SanicTokenAuth(app, secret_key='Z0SbdsCkNXgrvQSGXqZWTsd0ylWVJasO')
+db = TinyDB('db/login_access')
 
 # API auth
 def api_auth_required():
@@ -36,11 +35,18 @@ def api_auth_required():
         @wraps(f)
         async def privileged(request, *args, **kwargs):
             # Authorization Basic
-            _, auth_token = request.token.split(' ')
-            decoded = base64.b64decode(auth_token).decode("utf-8")
-            username, password = decoded.split(":")
+            if request.token == None:
+                # no auth header
+                return response.json(None, 401)
 
-            db = TinyDB('db/login_access')
+            try:
+                _, auth_token = request.token.split(' ')
+                decoded = base64.b64decode(auth_token).decode("utf-8")
+                username, password = decoded.split(":")
+            except Exception:
+                # bad token
+                return response.json(None, 401)
+
             q = Query()
             result = next(iter(
                 db.search((q.username == username) & (q.password == password))
@@ -49,7 +55,7 @@ def api_auth_required():
                 # the user is authorized.
                 return await f(request, *args, **kwargs)
             else:
-                # the user is not authorized.
+                # incorrect user
                 return response.json(None, 401)
         return privileged
     return decorator
@@ -111,7 +117,6 @@ async def login(request):
     with open("www/style.css", "r", encoding='utf-8') as f:
         style = f.read()
 
-    db = TinyDB('db/login_access')
     q = Query()
     result = next(iter(
         db.search((q.username == username) & (q.password == password))
