@@ -1,14 +1,49 @@
 import requests
-import json
-import time
+import aiohttp
+import asyncio
+
+class AsyncTestClient():
+    def __init__(self, service_host, auth):
+        self.service_host = service_host
+        self.api_archives_url = service_host + '/api/archives'
+        self.auth = aiohttp.BasicAuth(login=auth[0], password=auth[1])
+
+    async def get_requests(self, params, count):
+        tasks = []
+        async with aiohttp.ClientSession(auth=self.auth) as session:
+            for i in range(count):
+                task = asyncio.ensure_future(self._fetch_get(params, session))
+                tasks.append(task)
+
+            responses = asyncio.gather(*tasks)
+            await responses
+
+    async def post_requests(self, data, count):
+        tasks = []
+        async with aiohttp.ClientSession(auth=self.auth) as session:
+            for i in range(count):
+                task = asyncio.ensure_future(self._fetch_post(data, session))
+                tasks.append(task)
+
+            responses = asyncio.gather(*tasks)
+            await responses
+
+    async def _fetch_get(self, params, session):
+        async with session.get(self.api_archives_url, params=params) as response:
+            return await response.read()
+
+    async def _fetch_post(self, data, session):
+        async with session.post(self.api_archives_url, json=data) as response:
+            return await response.read()
+
 
 class TestClient():
-    def __init__(self, service_host, headers):
+    def __init__(self, service_host, auth):
         self.session = requests.Session()
         self.service_host = service_host
         self.api_archives_url = service_host + '/api/archives'
         self._test_number = 1
-        self.headers = headers
+        self.auth = auth
 
     def get_archive(self, data):
         r = self.post_request(data)
@@ -20,49 +55,9 @@ class TestClient():
         return r
         
     def post_request(self, data):
-        r = self.session.post(self.api_archives_url, json=data, headers=self.headers)
+        r = self.session.post(self.api_archives_url, json=data, auth=auth)
         return r
 
     @property
     def test_number(self):
        	return self._test_number
-       
-
-if __name__ == "__main__":
-
-    auth_headers = {'Authorization': 'Basic YWRtaW46YWRtaW4='}
-    t = TestClient(service_host="http://0.0.0.0:8080", headers=auth_headers)
-
-    test_files_dict = {
-        "Hidden Service lists and search engines" : "test_link_sites.json",
-        "Marketplace Financial" : "test_finance.json",
-        "Marketplace Commercial Services" : "test_commercial_services.json",
-        "Blogs and radios" : "test_blogs.json",
-        "Politics" : "test_politics.json"
-    }
-
-    for tests_name, tests_file in test_files_dict.items():
-        print("======================================================================")
-        print("Website group: %s from file %s" % (tests_name, tests_file))
-        print("======================================================================")
-        with open(tests_file) as f:
-            tests_json = json.load(f)
-            # Get archives for each individual page
-            for web_name, url in tests_json.items():
-                print("Website: %s, URL: %s" % (web_name, url) )
-                data = {
-                    'urls' : [ url ],
-                    'name' : "DeepWebTest-{}".format(t.test_number),
-                    'headers' : {},
-                    'forceTor' : True,
-                }
-
-                timing_start = time.time()
-                t.get_archive(data=data)
-                timing_end = time.time()
-                print("  archiving request time: %s" % (timing_end - timing_start))
-            
-
-
-    
-

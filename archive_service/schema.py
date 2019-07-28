@@ -66,7 +66,7 @@ class ArchivePostSchema(Schema):
                 },
                 "name" : {
                     "type" : "string",
-                    "pattern" : "^[a-zA-Z0-9-]+$"
+                    "pattern" : "^[a-zA-Z0-9-]*$"
                 },
                 "forceTor" : {
                     "type" : "boolean"

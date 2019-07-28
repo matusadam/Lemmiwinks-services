@@ -40,6 +40,7 @@ def api_auth_required():
                 return response.json(None, 401)
 
             try:
+                print(request.token)
                 _, auth_token = request.token.split(' ')
                 decoded = base64.b64decode(auth_token).decode("utf-8")
                 username, password = decoded.split(":")
